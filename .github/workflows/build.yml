@@ -1,0 +1,52 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk scrmoods.apk
+
+      - name: Upload APK (Actions tab → this run → Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrmoods-apk
+          path: scrmoods.apk
+
+      # On every push to main/master, replace the "latest" release so the APK
+      # is always downloadable from the repo's Releases page (handy on the phone).
+      - name: Publish to Releases → latest
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest scrmoods.apk \
+            --title "scrmoods build ${{ github.run_number }}" \
+            --notes "Built from ${{ github.sha }}. Download scrmoods.apk below and open it on your phone to install or update." \
+            --target ${{ github.sha }} \
+            --prerelease
