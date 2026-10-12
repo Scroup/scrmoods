@@ -110,6 +110,15 @@ fun GraphScreen() {
             Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp), minHeight = 38, idleColor = Page,
         )
 
+        // A plain-words retrospective of the chosen period
+        val periodLabel = if (nDays == 365) "year" else "$nDays days"
+        var showSummary by remember { mutableStateOf(false) }
+        SummaryButton(periodLabel) { showSummary = true }
+        if (showSummary) {
+            val pages = remember(rangeIdx) { SummaryLogic.build(Repo.data, days, periodLabel) }
+            SummaryDialog(pages) { showSummary = false }
+        }
+
         val moodOn = data.sections.firstOrNull { it.id == Sections.BIPOLAR }?.hidden == false
         if (moodOn) TrendCard("Mood trend") { MoodTrendChart(days) }
 
