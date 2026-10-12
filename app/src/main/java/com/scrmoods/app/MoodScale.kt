@@ -23,6 +23,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,67 +61,78 @@ object MoodScale {
     fun level(v: Int) = levels[v.coerceIn(0, 10)]
 }
 
-/** The mood scale card at the top of the journal. */
+/** The mood scale card at the top of the journal. On mixed days two numbers can be picked. */
 @Composable
 fun MoodScaleCard(
     value: String?,
+    value2: String?,
     mixed: String?,
     gutter: Dp,
-    onChange: (String?) -> Unit,
+    onChange: (Int?, Int?) -> Unit,
     onMixedChange: (String?) -> Unit,
 ) {
-    val v = value?.toFloatOrNull()?.toInt()?.coerceIn(0, 10)
+    val isMixed = mixed == "1"
+    val a = value?.toFloatOrNull()?.toInt()?.coerceIn(0, 10)
+    val b = if (isMixed) value2?.toFloatOrNull()?.toInt()?.coerceIn(0, 10) else null
+
+    fun tap(n: Int) {
+        if (!isMixed) { onChange(if (a == n) null else n, null); return }
+        when {
+            n == a -> onChange(b, null)   // remove the first; the second becomes the main one
+            n == b -> onChange(a, null)
+            a == null -> onChange(n, null)
+            else -> onChange(a, n)        // set (or replace) the second number
+        }
+    }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = gutter)) {
         Text(
-            "Where is your mood today?",
+            if (isMixed) "Pick two numbers: how low and how high you feel" else "Where is your mood today?",
             fontSize = 15.5.sp, lineHeight = 21.sp, color = Ink,
             modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
         )
 
-        // The chosen state, tinted by its zone
-        val tone = if (v != null) MoodScale.zoneColor(v) else Rule
+        // The chosen state(s): always the same height, centred like a page
+        val shape = RoundedCornerShape(16.dp)
         Row(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(if (v != null) tone.copy(alpha = 0.2f) else Paper)
-                .border(1.dp, if (v != null) tone.copy(alpha = 0.55f) else Rule, RoundedCornerShape(16.dp))
-                .padding(14.dp)
-                .heightIn(min = 64.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .height(PanelHeight)
+                .clip(shape)
+                .background(Paper)
+                .border(1.dp, Rule, shape),
         ) {
-            if (v == null) {
-                Text(
-                    "Tap a number below: 0 is severe depression, 5 balanced, 10 mania.",
-                    fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 19.sp,
-                )
-            } else {
-                Text(
-                    v.toString(),
-                    fontSize = 40.sp, fontWeight = FontWeight.Medium, color = tone,
-                    modifier = Modifier.width(52.dp),
-                    textAlign = TextAlign.Center,
-                )
-                Column(Modifier.padding(start = 10.dp)) {
-                    Text(MoodScale.level(v).name, fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Ink)
+            val shown = listOfNotNull(a, b).sorted()
+            if (shown.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        MoodScale.level(v).description,
-                        fontSize = 13.5.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
-                        modifier = Modifier.padding(top = 2.dp),
+                        "Tap a number below: 0 is severe depression, 5 balanced, 10 mania.",
+                        fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 19.sp,
+                        textAlign = TextAlign.Center,
                     )
+                }
+            } else {
+                shown.forEachIndexed { i, v ->
+                    StatePanel(v, compact = shown.size == 2, modifier = Modifier.weight(1f).fillMaxHeight())
+                    if (i == 0 && shown.size == 2) Box(Modifier.width(1.dp).fillMaxHeight().background(Rule))
                 }
             }
         }
 
-        // 0–10 dots; tap the chosen one again to clear it
+        // 0–10 dots; tap a chosen one again to clear it
+        val lo = listOfNotNull(a, b).minOrNull()
+        val hi = listOfNotNull(a, b).maxOrNull()
         Row(
             Modifier.fillMaxWidth().padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             for (n in 0..10) {
-                val sel = v == n
-                val inRange = v != null && ((v < 5 && n in v..5) || (v > 5 && n in 5..v))
+                val sel = n == a || n == b
+                val inRange = when {
+                    lo == null || hi == null -> false
+                    b != null -> n in lo..hi
+                    else -> (lo < 5 && n in lo..5) || (lo > 5 && n in 5..lo)
+                }
                 val c = MoodScale.zoneColor(n)
                 Box(
                     Modifier
@@ -132,7 +147,7 @@ fun MoodScaleCard(
                             },
                         )
                         .border(1.dp, if (sel) c else c.copy(alpha = 0.45f), CircleShape)
-                        .clickable { onChange(if (sel) null else n.toString()) },
+                        .clickable { tap(n) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -151,7 +166,6 @@ fun MoodScaleCard(
         }
 
         // Mixed features: depressive and high symptoms at the same time
-        val isMixed = mixed == "1"
         Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (isMixed) "✓ Mixed features" else "Mixed features",
@@ -164,20 +178,23 @@ fun MoodScaleCard(
                     .clip(RoundedCornerShape(50))
                     .background(if (isMixed) Accent else Paper)
                     .border(1.dp, if (isMixed) Accent else Rule, RoundedCornerShape(50))
-                    .clickable { onMixedChange(if (isMixed) null else "1") }
+                    .clickable {
+                        if (isMixed) { onMixedChange(null); onChange(a, null) } else onMixedChange("1")
+                    }
                     .padding(horizontal = 14.dp, vertical = 7.dp),
             )
             Text(
-                "low and high at the same time",
+                if (isMixed) "pick a low and a high number" else "low and high at the same time",
                 fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 16.sp,
                 modifier = Modifier.weight(1f).padding(start = 10.dp),
             )
         }
 
         // A gentle word at the extremes
-        val support = when (v) {
-            0, 1 -> "If you're thinking about suicide, please reach out now: call a crisis line or emergency services, or tell someone you trust. You don't have to carry this alone."
-            9, 10 -> "This is a lot. Consider contacting your doctor or someone you trust today."
+        val values = listOfNotNull(a, b)
+        val support = when {
+            values.any { it <= 1 } -> "If you're thinking about suicide, please reach out now: call a crisis line or emergency services, or tell someone you trust. You don't have to carry this alone."
+            values.any { it >= 9 } -> "This is a lot. Consider contacting your doctor or someone you trust today."
             else -> null
         }
         if (support != null) {
@@ -192,5 +209,36 @@ fun MoodScaleCard(
                     .padding(12.dp),
             )
         }
+    }
+}
+
+/** Fixed height, so the card doesn't jump as different descriptions are shown. */
+private val PanelHeight = 196.dp
+
+/** Number, state name and description, centred, tinted by the zone. */
+@Composable
+private fun StatePanel(v: Int, compact: Boolean, modifier: Modifier) {
+    val tone = MoodScale.zoneColor(v)
+    val level = MoodScale.level(v)
+    Column(
+        modifier
+            .background(tone.copy(alpha = 0.2f))
+            .padding(horizontal = if (compact) 10.dp else 18.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(v.toString(), fontSize = if (compact) 34.sp else 42.sp, lineHeight = if (compact) 38.sp else 46.sp, fontWeight = FontWeight.Medium, color = tone)
+        Text(
+            level.name,
+            fontSize = if (compact) 14.sp else 18.sp, lineHeight = if (compact) 18.sp else 23.sp,
+            fontWeight = FontWeight.Medium, color = Ink, textAlign = TextAlign.Center, maxLines = 2,
+        )
+        Text(
+            level.description,
+            fontSize = if (compact) 12.sp else 13.5.sp, lineHeight = if (compact) 16.sp else 18.sp,
+            fontStyle = FontStyle.Italic, color = InkSoft, textAlign = TextAlign.Center,
+            maxLines = if (compact) 5 else 4, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }

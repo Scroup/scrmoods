@@ -145,9 +145,13 @@ fun CheckInScreen(
                     SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
                     MoodScaleCard(
                         value = entry.values[MoodPoints.SCALE],
+                        value2 = entry.values[MoodPoints.SCALE2],
                         mixed = entry.values[MoodPoints.MIXED],
                         gutter = Gutter,
-                        onChange = { Repo.setValue(key, MoodPoints.SCALE, it) },
+                        onChange = { a, b ->
+                            Repo.setValue(key, MoodPoints.SCALE, a?.toString())
+                            Repo.setValue(key, MoodPoints.SCALE2, b?.toString())
+                        },
                         onMixedChange = { Repo.setValue(key, MoodPoints.MIXED, it) },
                     )
                 }

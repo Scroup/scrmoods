@@ -83,6 +83,8 @@ object Sections {
 /** Ids of the mood scale (0 severe depression, 5 balanced, 10 mania) and its "mixed features" flag. */
 object MoodPoints {
     const val SCALE = "bipolar_mood"
+    /** The second number on a mixed day (e.g. 2 and 8). */
+    const val SCALE2 = "bipolar_mood2"
     const val MIXED = "bipolar_mixed"
 }
 
@@ -102,6 +104,8 @@ object Defaults {
     val points = listOf(
         TrackingPoint(MoodPoints.SCALE, Sections.BIPOLAR, PointType.NUMBER, "Mood scale",
             min = 0f, max = 10f, step = 1f, better = Better.MIDDLE),
+        TrackingPoint(MoodPoints.SCALE2, Sections.BIPOLAR, PointType.NUMBER, "Mood scale, second number on mixed days",
+            min = 0f, max = 10f, step = 1f, better = Better.NONE),
         TrackingPoint(MoodPoints.MIXED, Sections.BIPOLAR, PointType.YESNO, "Mixed features", better = Better.NONE),
         TrackingPoint("outlook", Sections.DAILY, PointType.SCALE, "How was your overall outlook today?",
             listOf("Negative", "Neutral", "Positive"), better = Better.HIGHER),
@@ -175,7 +179,7 @@ fun ensureBuiltIns(d: AppData): AppData {
         if (sections.none { it.id == def.id }) sections.add(i.coerceAtMost(sections.size), def)
     }
     val points = d.points.toMutableList()
-    for (id in listOf(MoodPoints.MIXED, MoodPoints.SCALE)) { // added at the front, so the scale ends up first
+    for (id in listOf(MoodPoints.MIXED, MoodPoints.SCALE2, MoodPoints.SCALE)) { // added at the front, so the scale ends up first
         if (points.none { it.id == id }) points.add(0, Defaults.points.first { it.id == id })
     }
     return d.copy(sections = sections, points = points)

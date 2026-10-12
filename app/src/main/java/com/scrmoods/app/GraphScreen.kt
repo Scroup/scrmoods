@@ -88,7 +88,7 @@ private fun summary(p: TrackingPoint, s: Stats?): String {
 @Composable
 fun GraphScreen() {
     val data = Repo.data
-    val chartable = data.points.filter { it.type != PointType.TEXT }
+    val chartable = data.points.filter { it.type != PointType.TEXT && it.id != MoodPoints.SCALE2 }
     var pointId by remember { mutableStateOf(chartable.firstOrNull { it.id == "outlook" }?.id ?: chartable.firstOrNull()?.id) }
     var rangeIdx by remember { mutableIntStateOf(1) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -104,8 +104,21 @@ fun GraphScreen() {
     }
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
 
-        // The chosen tracking point is the page heading; tap it to pick another.
-        Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
+        // One period for the whole page
+        Segmented(
+            ranges.map { it.second }, rangeIdx, { if (it != null) rangeIdx = it },
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp), minHeight = 38, idleColor = Page,
+        )
+
+        val moodOn = data.sections.firstOrNull { it.id == Sections.BIPOLAR }?.hidden == false
+        if (moodOn) TrendCard("Mood trend") { MoodTrendChart(days) }
+
+        val sleep = data.points.firstOrNull { it.id == "sleep_hours" && !it.archived }
+        if (sleep != null) TrendCard("Sleep pattern") { SleepChart(sleep, days) }
+
+        SectionHeader("Any tracking point")
+        // The chosen tracking point is the heading; tap it to pick another.
+        Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)) {
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -134,14 +147,9 @@ fun GraphScreen() {
             }
         }
 
-        Segmented(
-            ranges.map { it.second }, rangeIdx, { if (it != null) rangeIdx = it },
-            Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp), minHeight = 38, idleColor = Page,
-        )
-
         Column(
             Modifier
-                .padding(horizontal = 16.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Page)
                 .border(1.dp, Rule, RoundedCornerShape(16.dp))
@@ -389,4 +397,170 @@ private fun Chart(p: TrackingPoint, days: List<LocalDate>) {
             }
         }
     }
+}
+
+/** A rounded card with a title, used for the fixed charts at the top of Trends. */
+@Composable
+private fun TrendCard(title: String, content: @Composable () -> Unit) {
+    Column(
+        Modifier
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Page)
+            .border(1.dp, Rule, RoundedCornerShape(16.dp))
+            .padding(top = 12.dp, bottom = 10.dp),
+    ) {
+        Text(title, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Ink, modifier = Modifier.padding(start = 14.dp, bottom = 6.dp))
+        content()
+    }
+}
+
+@Composable
+private fun DateEnds(days: List<LocalDate>) {
+    val dfmt = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    Row(Modifier.fillMaxWidth().padding(start = 72.dp, end = 14.dp)) {
+        Text(days.first().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
+        Text(days.last().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String, line: Boolean = false) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp, top = 4.dp)) {
+        Box(
+            Modifier
+                .width(if (line) 4.dp else 11.dp)
+                .height(11.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color),
+        )
+        Text(label, fontSize = 12.sp, color = InkSoft, modifier = Modifier.padding(start = 5.dp))
+    }
+}
+
+/**
+ * The mood scale over time: coloured bands for each zone, a line through the daily score,
+ * and mixed days drawn as a vertical bar between their two numbers.
+ */
+@Composable
+private fun MoodTrendChart(days: List<LocalDate>) {
+    val entries = Repo.data.entries
+    data class Day(val a: Float?, val b: Float?)
+    val vals = days.map { d ->
+        val e = entries[d.toString()]?.values
+        val a = e?.get(MoodPoints.SCALE)?.toFloatOrNull()
+        val b = if (e?.get(MoodPoints.MIXED) == "1") e[MoodPoints.SCALE2]?.toFloatOrNull() else null
+        Day(a, b)
+    }
+    // zone bands, bottom (0) to top (10)
+    val bands = listOf(0f to 1.5f, 1.5f to 3.5f, 3.5f to 6.5f, 6.5f to 8.5f, 8.5f to 10f)
+    val bandColors = listOf(0, 2, 5, 7, 10).map { MoodScale.zoneColor(it) }
+
+    Row(Modifier.fillMaxWidth().height(220.dp).padding(end = 14.dp)) {
+        Column(
+            Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            for (l in listOf("10 Mania", "5 Balanced", "0 Depression")) {
+                Text(l, fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Canvas(Modifier.weight(1f).fillMaxHeight()) {
+            val top = 8.dp.toPx(); val bottom = size.height - 8.dp.toPx(); val h = bottom - top
+            fun y(v: Float) = bottom - v.coerceIn(0f, 10f) / 10f * h
+            val n = days.size
+            val slot = size.width / n
+            fun x(i: Int) = slot * i + slot / 2
+            bands.forEachIndexed { i, (lo, hi) ->
+                drawRect(bandColors[i].copy(alpha = 0.16f), Offset(0f, y(hi)), androidx.compose.ui.geometry.Size(size.width, y(lo) - y(hi)))
+            }
+            drawLine(Rule, Offset(0f, y(5f)), Offset(size.width, y(5f)), strokeWidth = 1.dp.toPx())
+            // mixed days: a bar between the two numbers
+            vals.forEachIndexed { i, d ->
+                if (d.a != null && d.b != null) {
+                    drawLine(Accent.copy(alpha = 0.7f), Offset(x(i), y(d.a)), Offset(x(i), y(d.b)), strokeWidth = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                }
+            }
+            val path = Path(); var started = false
+            vals.forEachIndexed { i, d ->
+                val v = d.a ?: return@forEachIndexed
+                if (!started) { path.moveTo(x(i), y(v)); started = true } else path.lineTo(x(i), y(v))
+            }
+            drawPath(path, Ink.copy(alpha = 0.55f), style = Stroke(width = 1.6.dp.toPx()))
+            val r = if (n > 120) 2.2.dp.toPx() else 3.6.dp.toPx()
+            vals.forEachIndexed { i, d ->
+                d.a?.let { drawCircle(MoodScale.zoneColor(it.roundToInt()), r, Offset(x(i), y(it))) }
+                d.b?.let { drawCircle(MoodScale.zoneColor(it.roundToInt()), r, Offset(x(i), y(it))) }
+            }
+        }
+    }
+    DateEnds(days)
+    Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp)) {
+        Row { LegendItem(MoodScale.zoneColor(10), "Mania"); LegendItem(MoodScale.zoneColor(7), "Hypomania"); LegendItem(MoodScale.zoneColor(5), "Balanced") }
+        Row { LegendItem(MoodScale.zoneColor(2), "Mild to moderate"); LegendItem(MoodScale.zoneColor(0), "Severe"); LegendItem(Accent, "Mixed", line = true) }
+        val answered = vals.count { it.a != null }
+        if (answered == 0) {
+            Text("No mood scale answers in this period yet.", fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(top = 8.dp))
+        } else {
+            val balanced = vals.count { it.a != null && it.a.roundToInt() in 4..6 && it.b == null }
+            val mixedDays = vals.count { it.b != null }
+            Text(
+                "Balanced on $balanced of $answered days" + if (mixedDays > 0) ", mixed on $mixedDays" else "",
+                fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+/** Hours of sleep per night as bars, with a dashed line for the average. */
+@Composable
+private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
+    val vals = days.map { p.numeric(Repo.data.entries[it.toString()]?.values?.get(p.id)) }
+    val known = vals.filterNotNull()
+    val maxV = maxOf(10f, ((known.maxOrNull() ?: 0f) / 2f).let { kotlin.math.ceil(it) * 2f })
+    val avg = if (known.isEmpty()) null else known.average().toFloat()
+    val unit = p.unit.ifBlank { "hrs" }
+    val grid = listOf(maxV, maxV * 3 / 4, maxV / 2, maxV / 4, 0f)
+
+    Row(Modifier.fillMaxWidth().height(190.dp).padding(end = 14.dp)) {
+        Column(
+            Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            for (g in grid) Text("${formatNumber(g)} h", fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+        }
+        Canvas(Modifier.weight(1f).fillMaxHeight()) {
+            val top = 8.dp.toPx(); val bottom = size.height - 8.dp.toPx(); val h = bottom - top
+            fun y(v: Float) = bottom - (v / maxV).coerceIn(0f, 1f) * h
+            grid.forEach { g -> drawLine(Rule, Offset(0f, y(g)), Offset(size.width, y(g)), strokeWidth = 1.dp.toPx()) }
+            val n = days.size
+            val slot = size.width / n
+            val barW = (slot * 0.68f).coerceAtLeast(1.dp.toPx()).coerceAtMost(22.dp.toPx())
+            vals.forEachIndexed { i, v ->
+                if (v == null || v <= 0f) return@forEachIndexed
+                val cx = slot * i + slot / 2
+                drawRoundRect(
+                    Accent.copy(alpha = 0.78f),
+                    Offset(cx - barW / 2, y(v)),
+                    androidx.compose.ui.geometry.Size(barW, bottom - y(v)),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(minOf(barW / 2, 3.dp.toPx())),
+                )
+            }
+            avg?.let {
+                drawLine(
+                    Ink.copy(alpha = 0.6f), Offset(0f, y(it)), Offset(size.width, y(it)),
+                    strokeWidth = 1.4.dp.toPx(),
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx())),
+                )
+            }
+        }
+    }
+    DateEnds(days)
+    Text(
+        if (known.isEmpty()) "No sleep answers in this period yet."
+        else "Average ${"%.1f".format(Locale.US, avg)} $unit (dashed line), shortest ${formatNumber(known.min())}, longest ${formatNumber(known.max())}, ${known.size} nights",
+        fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
+    )
 }
