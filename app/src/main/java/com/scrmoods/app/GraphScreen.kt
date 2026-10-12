@@ -194,6 +194,7 @@ fun GraphScreen() {
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
         )
         for (section in data.sections) {
+            if (section.hidden) continue
             val pts = chartable.filter { it.sectionId == section.id && !it.archived }
             if (pts.isEmpty()) continue
             Text(
@@ -208,7 +209,8 @@ fun GraphScreen() {
 
 /** Colours a value by how good it is (red → honey → green), or violet ink when the point has no direction. */
 private fun moodColorFor(p: TrackingPoint, v: Float): Color =
-    p.goodness(v)?.let { moodColor(it) } ?: Accent
+    if (p.id == MoodPoints.SCALE) MoodScale.zoneColor(v.roundToInt())
+    else p.goodness(v)?.let { moodColor(it) } ?: Accent
 
 private enum class Verdict { GOOD, MIXED, BAD, NONE }
 
@@ -226,7 +228,9 @@ private fun verdict(p: TrackingPoint, s: Stats?): Verdict {
 private fun tagText(p: TrackingPoint, s: Stats): String = when (p.type) {
     PointType.SCALE -> p.options.getOrNull(s.avg.roundToInt()) ?: formatNumber(s.avg)
     PointType.YESNO -> if (s.avg >= 0.5f) "Yes ${(s.avg * 100).roundToInt()}%" else "No ${((1 - s.avg) * 100).roundToInt()}%"
-    PointType.NUMBER -> "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " ${p.unit}" else ""
+    PointType.NUMBER ->
+        if (p.id == MoodPoints.SCALE) "${MoodScale.level(s.avg.roundToInt()).name} ${"%.1f".format(Locale.US, s.avg)}"
+        else "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " ${p.unit}" else ""
     PointType.TEXT -> ""
 }
 
@@ -328,7 +332,8 @@ private fun Chart(p: TrackingPoint, days: List<LocalDate>) {
     val labels: List<String> = when (p.type) {
         PointType.SCALE -> p.options.reversed()
         PointType.YESNO -> listOf("Yes", "No")
-        else -> listOf(formatNumber(hi), formatNumber((lo + hi) / 2), formatNumber(lo))
+        else -> if (p.id == MoodPoints.SCALE) listOf("Mania", "Balanced", "Depression")
+            else listOf(formatNumber(hi), formatNumber((lo + hi) / 2), formatNumber(lo))
     }
     val values: List<Float?> = days.map { p.numeric(Repo.data.entries[it.toString()]?.values?.get(p.id)) }
     val chartHeight = 220.dp

@@ -14,14 +14,18 @@ enum class PointType(val xmlName: String, val title: String) {
 
 /** Which way is good for a tracking point. Drives the green / red colouring in Trends. */
 enum class Better(val xmlName: String) {
-    HIGHER("higher"), LOWER("lower"), NONE("none");
+    HIGHER("higher"), LOWER("lower"), NONE("none"),
+
+    /** Best in the middle of the range, worse towards either end (the mood scale: 5 is balanced). */
+    MIDDLE("middle");
 
     companion object {
         fun fromXml(s: String?): Better? = entries.firstOrNull { it.xmlName == s }
     }
 }
 
-data class Section(val id: String, val title: String)
+/** [hidden] sections are switched off in Settings: not shown in the journal, their past answers are kept. */
+data class Section(val id: String, val title: String, val hidden: Boolean = false)
 
 data class TrackingPoint(
     val id: String,
@@ -73,6 +77,13 @@ object Sections {
     const val SOCIAL = "social"
     const val CUSTOM = "custom"
     const val MEDS = "meds"
+    const val BIPOLAR = "bipolar"
+}
+
+/** Ids of the mood scale (0 severe depression, 5 balanced, 10 mania) and its "mixed features" flag. */
+object MoodPoints {
+    const val SCALE = "bipolar_mood"
+    const val MIXED = "bipolar_mixed"
 }
 
 object Defaults {
@@ -80,6 +91,7 @@ object Defaults {
     private val level = listOf("Not at all", "Low", "Medium", "High")
 
     val sections = listOf(
+        Section(Sections.BIPOLAR, "Mood scale"),
         Section(Sections.DAILY, "Daily Check-in"),
         Section(Sections.HEALTH, "Health and Self Care"),
         Section(Sections.SOCIAL, "Mental and Social Stimulation"),
@@ -88,6 +100,9 @@ object Defaults {
     )
 
     val points = listOf(
+        TrackingPoint(MoodPoints.SCALE, Sections.BIPOLAR, PointType.NUMBER, "Mood scale",
+            min = 0f, max = 10f, step = 1f, better = Better.MIDDLE),
+        TrackingPoint(MoodPoints.MIXED, Sections.BIPOLAR, PointType.YESNO, "Mixed features", better = Better.NONE),
         TrackingPoint("outlook", Sections.DAILY, PointType.SCALE, "How was your overall outlook today?",
             listOf("Negative", "Neutral", "Positive"), better = Better.HIGHER),
         TrackingPoint("productive", Sections.DAILY, PointType.SCALE, "How productive were you today?", freq, better = Better.HIGHER),
@@ -141,6 +156,7 @@ fun TrackingPoint.fraction(v: Float): Float = when (type) {
 fun TrackingPoint.goodness(v: Float): Float? = when (better) {
     Better.HIGHER -> fraction(v)
     Better.LOWER -> 1f - fraction(v)
+    Better.MIDDLE -> 1f - kotlin.math.abs(fraction(v) - 0.5f) * 2f
     Better.NONE -> null
 }
 
@@ -148,3 +164,19 @@ fun TrackingPoint.goodness(v: Float): Float? = when (better) {
 fun defaultBetter(id: String, type: PointType): Better =
     Defaults.points.firstOrNull { it.id == id }?.better
         ?: if (type == PointType.YESNO) Better.HIGHER else Better.NONE
+
+/**
+ * Makes sure built-in sections exist (in their usual order) and that the mood scale points exist,
+ * so files saved by older versions get the new features.
+ */
+fun ensureBuiltIns(d: AppData): AppData {
+    val sections = d.sections.toMutableList()
+    Defaults.sections.forEachIndexed { i, def ->
+        if (sections.none { it.id == def.id }) sections.add(i.coerceAtMost(sections.size), def)
+    }
+    val points = d.points.toMutableList()
+    for (id in listOf(MoodPoints.MIXED, MoodPoints.SCALE)) { // added at the front, so the scale ends up first
+        if (points.none { it.id == id }) points.add(0, Defaults.points.first { it.id == id })
+    }
+    return d.copy(sections = sections, points = points)
+}

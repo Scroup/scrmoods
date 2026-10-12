@@ -145,6 +145,10 @@ object Repo {
         d.copy(points = list)
     }
 
+    fun setSectionHidden(id: String, hidden: Boolean) = update { d ->
+        d.copy(sections = d.sections.map { if (it.id == id) it.copy(hidden = hidden) else it })
+    }
+
     fun newId(prefix: String) = prefix + "_" + System.currentTimeMillis().toString(36)
 
     // ---------- import / export ----------

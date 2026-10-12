@@ -76,6 +76,7 @@ fun ManageScreen(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp), fontStyle = FontStyle.Italic, lineHeight = 21.sp,
             )
             for (section in data.sections) {
+                if (section.id == Sections.BIPOLAR) continue // switched on/off in Settings
                 val points = data.points.filter { it.sectionId == section.id && !it.archived }
                 SectionHeader(section.title)
                 points.forEachIndexed { i, p ->
@@ -103,7 +104,7 @@ fun ManageScreen(
                 ) { onAdd(section.id) }
             }
 
-            val removed = data.points.filter { it.archived }
+            val removed = data.points.filter { it.archived && it.sectionId != Sections.BIPOLAR }
             if (removed.isNotEmpty()) {
                 SectionHeader("Removed tracking points")
                 Text(
@@ -181,7 +182,7 @@ fun PointEditorDialog(
     onDismiss: () -> Unit,
     onSave: (TrackingPoint) -> Unit,
 ) {
-    val sections = Repo.data.sections
+    val sections = Repo.data.sections.filter { it.id != Sections.BIPOLAR }
     var label by remember { mutableStateOf(existing?.label ?: "") }
     var sectionId by remember { mutableStateOf(existing?.sectionId ?: defaultSection) }
     var type by remember {

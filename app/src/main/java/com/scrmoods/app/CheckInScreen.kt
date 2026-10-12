@@ -139,6 +139,20 @@ fun CheckInScreen(
         JournalDateHeader(date, onDateChange)
 
         for (section in data.sections) {
+            if (section.hidden) continue
+            if (section.id == Sections.BIPOLAR) {
+                JournalCard {
+                    SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
+                    MoodScaleCard(
+                        value = entry.values[MoodPoints.SCALE],
+                        mixed = entry.values[MoodPoints.MIXED],
+                        gutter = Gutter,
+                        onChange = { Repo.setValue(key, MoodPoints.SCALE, it) },
+                        onMixedChange = { Repo.setValue(key, MoodPoints.MIXED, it) },
+                    )
+                }
+                continue
+            }
             val points = data.points.filter { it.sectionId == section.id && !it.archived }
             val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
             if (points.isEmpty() && !alwaysShown) continue

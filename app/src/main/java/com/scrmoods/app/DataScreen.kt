@@ -15,12 +15,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +68,35 @@ fun DataScreen(onManage: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         SectionHeader("Appearance")
         ThemePicker()
+
+        SectionHeader("Journal sections")
+        val bipolar = data.sections.firstOrNull { it.id == Sections.BIPOLAR }
+        if (bipolar != null) {
+            Row(
+                Modifier.fillMaxWidth().clickable { Repo.setSectionHidden(Sections.BIPOLAR, !bipolar.hidden) }
+                    .padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text("Mood scale", fontSize = 16.sp, color = Ink)
+                    Text(
+                        "Track depression and mania from 0 to 10 at the top of the journal. Hiding it keeps your past answers.",
+                        fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                    )
+                }
+                Switch(
+                    checked = !bipolar.hidden,
+                    onCheckedChange = { Repo.setSectionHidden(Sections.BIPOLAR, !it) },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = Accent,
+                        checkedThumbColor = Color.White,
+                        uncheckedTrackColor = Paper,
+                        uncheckedThumbColor = InkFaint,
+                        uncheckedBorderColor = Rule,
+                    ),
+                )
+            }
+        }
 
         SectionHeader("Your journal")
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {

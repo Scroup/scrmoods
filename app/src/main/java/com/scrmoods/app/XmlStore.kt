@@ -46,6 +46,7 @@ object XmlStore {
             s.startTag(null, "section")
             s.attribute(null, "id", sec.id)
             s.attribute(null, "title", sec.title)
+            if (sec.hidden) s.attribute(null, "hidden", "true")
             s.endTag(null, "section")
         }
         nl(s, 1); s.endTag(null, "sections")
@@ -140,6 +141,7 @@ object XmlStore {
                     "section" -> sections += Section(
                         p.getAttributeValue(null, "id") ?: "",
                         p.getAttributeValue(null, "title") ?: "",
+                        p.getAttributeValue(null, "hidden") == "true",
                     )
                     "point" -> {
                         curPoint = TrackingPoint(
@@ -196,9 +198,6 @@ object XmlStore {
         }
         if (!sawRoot) throw IllegalArgumentException("This is not a scrmoods file")
 
-        // Make sure all built-in sections exist even if the file is older or hand-edited.
-        val allSections = sections.toMutableList()
-        for (d in Defaults.sections) if (allSections.none { it.id == d.id }) allSections += d
-        return AppData(allSections, points, entries)
+        return ensureBuiltIns(AppData(sections, points, entries))
     }
 }
