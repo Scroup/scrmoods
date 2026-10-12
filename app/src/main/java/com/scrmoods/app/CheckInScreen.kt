@@ -417,7 +417,7 @@ private fun FinishDayButton(done: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(shape)
             .then(if (done) Modifier.border(1.dp, Rule, shape) else Modifier.background(Accent))
-            .clickable(onClick = onClick)
+            .clickable { Haptics.tap(); onClick() }
             .padding(vertical = 13.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,

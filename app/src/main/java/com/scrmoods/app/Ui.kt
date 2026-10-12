@@ -220,7 +220,7 @@ fun Segmented(
                             .clip(shape)
                             .background(if (isSel) Accent else idleColor)
                             .border(1.dp, if (isSel) Accent else Rule, shape)
-                            .clickable { onSelect(if (isSel) null else index) }
+                            .clickable { Haptics.tap(); onSelect(if (isSel) null else index) }
                             .padding(horizontal = 5.dp, vertical = 4.dp), // keeps text clear of the rounded edges
                         contentAlignment = Alignment.Center,
                     ) {
@@ -279,7 +279,7 @@ fun LinkButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit)
         fontWeight = FontWeight.Medium,
         modifier = modifier
             .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick)
+            .clickable { Haptics.tap(); onClick() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
@@ -293,7 +293,7 @@ fun RoundButton(enabled: Boolean = true, onClick: () -> Unit, content: @Composab
             .clip(CircleShape)
             .background(Page)
             .border(1.dp, Rule, CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(enabled = enabled) { Haptics.tap(); onClick() },
         contentAlignment = Alignment.Center,
     ) { content() }
 }

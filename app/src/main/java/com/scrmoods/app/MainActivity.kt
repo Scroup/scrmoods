@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
         Repo.init(applicationContext)
         Themes.init(applicationContext)
         GoodNight.init(applicationContext)
+        Haptics.init(applicationContext)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
         setContent {
@@ -133,7 +134,7 @@ fun App() {
                     for (t in Tab.entries) {
                         NavigationBarItem(
                             selected = tab == t,
-                            onClick = { tab = t },
+                            onClick = { Haptics.tap(); tab = t },
                             icon = { Icon(t.icon(), t.label) },
                             label = { Text(t.label, fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
                             colors = NavigationBarItemDefaults.colors(

@@ -147,7 +147,7 @@ fun MoodScaleCard(
                             },
                         )
                         .border(1.dp, if (sel) c else c.copy(alpha = 0.45f), CircleShape)
-                        .clickable { tap(n) },
+                        .clickable { Haptics.tap(); tap(n) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -179,6 +179,7 @@ fun MoodScaleCard(
                     .background(if (isMixed) Accent else Paper)
                     .border(1.dp, if (isMixed) Accent else Rule, RoundedCornerShape(50))
                     .clickable {
+                        Haptics.tap()
                         if (isMixed) { onMixedChange(null); onChange(a, null) } else onMixedChange("1")
                     }
                     .padding(horizontal = 14.dp, vertical = 7.dp),

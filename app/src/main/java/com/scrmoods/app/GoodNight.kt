@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,6 +35,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -256,7 +260,7 @@ fun GoodNightOverlay() {
     }
     LaunchedEffect(date) {
         fade.animateTo(1f, tween(700))
-        kotlinx.coroutines.delay(10_000)
+        kotlinx.coroutines.delay(13_000)
         closing = true
     }
     LaunchedEffect(closing) {
@@ -334,6 +338,7 @@ fun GoodNightOverlay() {
                 fontSize = 17.sp, lineHeight = 25.sp, color = Ink, textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
             )
+            EncouragementLine(date)
             Text(
                 "Tap anywhere to close",
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint,
@@ -341,4 +346,31 @@ fun GoodNightOverlay() {
             )
         }
     }
+}
+
+/**
+ * "You've filled in your journal on N days…" typed out letter by letter a few seconds after the card appears.
+ * The whole line is laid out from the start (the untyped part is invisible) so the card doesn't jump.
+ */
+@Composable
+private fun EncouragementLine(date: String) {
+    val days = Repo.data.entries.values.count { !it.isEmpty }
+    val line = "You've filled in your journal on $days ${if (days == 1) "day" else "days"}. " +
+        "Keep it up, you're doing great."
+    var shown by remember(date) { mutableIntStateOf(0) }
+    LaunchedEffect(date) {
+        kotlinx.coroutines.delay(2600)
+        for (i in 1..line.length) {
+            shown = i
+            kotlinx.coroutines.delay(if (line[i - 1] == '.' || line[i - 1] == ',') 260L else 38L)
+        }
+    }
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = Accent)) { append(line.take(shown)) }
+            withStyle(SpanStyle(color = Color.Transparent)) { append(line.drop(shown)) }
+        },
+        fontSize = 15.5.sp, lineHeight = 22.sp, fontStyle = FontStyle.Italic, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+    )
 }

@@ -74,7 +74,7 @@ fun DataScreen(onManage: () -> Unit) {
         val bipolar = data.sections.firstOrNull { it.id == Sections.BIPOLAR }
         if (bipolar != null) {
             Row(
-                Modifier.fillMaxWidth().clickable { Repo.setSectionHidden(Sections.BIPOLAR, !bipolar.hidden) }
+                Modifier.fillMaxWidth().clickable { Haptics.tap(); Repo.setSectionHidden(Sections.BIPOLAR, !bipolar.hidden) }
                     .padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -87,7 +87,7 @@ fun DataScreen(onManage: () -> Unit) {
                 }
                 Switch(
                     checked = !bipolar.hidden,
-                    onCheckedChange = { Repo.setSectionHidden(Sections.BIPOLAR, !it) },
+                    onCheckedChange = { Haptics.tap(); Repo.setSectionHidden(Sections.BIPOLAR, !it) },
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = Accent,
                         checkedThumbColor = OnAccent,
@@ -100,7 +100,7 @@ fun DataScreen(onManage: () -> Unit) {
         }
 
         Row(
-            Modifier.fillMaxWidth().clickable { Themes.setShowQuote(context, !Themes.showQuote) }
+            Modifier.fillMaxWidth().clickable { Haptics.tap(); Themes.setShowQuote(context, !Themes.showQuote) }
                 .padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -113,7 +113,7 @@ fun DataScreen(onManage: () -> Unit) {
             }
             Switch(
                 checked = Themes.showQuote,
-                onCheckedChange = { Themes.setShowQuote(context, it) },
+                onCheckedChange = { Haptics.tap(); Themes.setShowQuote(context, it) },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = Accent,
                     checkedThumbColor = OnAccent,
@@ -124,6 +124,9 @@ fun DataScreen(onManage: () -> Unit) {
             )
         }
 
+        SettingSwitch("Vibrate on tap", "A soft click of vibration when you tap buttons and answers.", Haptics.enabled) {
+            Haptics.setEnabled(context, it)
+        }
         SettingSwitch(
             "Good night celebration",
             "A \"Finish the day\" button under today's note: confetti, a good-night wish and a short lullaby.",
@@ -221,7 +224,7 @@ private fun ThemePicker() {
                             .clip(shape)
                             .background(t.paper)
                             .border(if (selected) 2.dp else 1.dp, if (selected) t.accent else t.rule, shape)
-                            .clickable { Themes.select(context, t) }
+                            .clickable { Haptics.tap(); Themes.select(context, t) }
                             .padding(7.dp),
                     ) {
                         // a tiny journal page: a card with two lines and an accent pill
@@ -263,7 +266,7 @@ private fun ThemePicker() {
 @Composable
 private fun SettingSwitch(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable { onChange(!checked) }
+        Modifier.fillMaxWidth().clickable { Haptics.tap(); onChange(!checked) }
             .padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -273,7 +276,7 @@ private fun SettingSwitch(title: String, description: String, checked: Boolean, 
         }
         Switch(
             checked = checked,
-            onCheckedChange = onChange,
+            onCheckedChange = { Haptics.tap(); onChange(it) },
             colors = SwitchDefaults.colors(
                 checkedTrackColor = Accent,
                 checkedThumbColor = OnAccent,

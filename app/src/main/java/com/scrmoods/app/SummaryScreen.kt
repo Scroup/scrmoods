@@ -120,7 +120,7 @@ fun SummaryButton(periodLabel: String, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Accent)
-            .pointerInput(Unit) { detectTapGestures { onClick() } }
+            .pointerInput(Unit) { detectTapGestures { Haptics.tap(); onClick() } }
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
