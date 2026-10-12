@@ -51,6 +51,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -232,6 +234,8 @@ private fun ChoiceStep(s: Step.Point, value: String?, onPick: (String) -> Unit) 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for ((v, label) in options) {
             val sel = v == selected
+            // red for the bad end, green for the good end (following the question's "Which is better?")
+            val c = s.p.goodness(v.toFloat())?.let { answerColor(it) } ?: Accent
             val pop = rememberPop()
             val shape = RoundedCornerShape(50)
             Box(
@@ -240,21 +244,33 @@ private fun ChoiceStep(s: Step.Point, value: String?, onPick: (String) -> Unit) 
                     .heightIn(min = 56.dp)
                     .then(pop.modifier)
                     .clip(shape)
-                    .background(if (sel) Accent else Page)
-                    .border(1.dp, if (sel) Accent else Rule, shape)
+                    .background(if (sel) c else c.copy(alpha = 0.13f).compositeOver(Page))
+                    .border(if (sel) 1.dp else 1.5.dp, if (sel) c else c.copy(alpha = 0.55f), shape)
                     .clickable {
                         Haptics.tap()
-                        pop.fire(stars = true, color = Accent)
+                        pop.fire(stars = true, color = c)
                         onPick(v.toString())
                     }
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, fontSize = 18.sp, color = if (sel) OnAccent else Ink, textAlign = TextAlign.Center)
+                Text(
+                    label, fontSize = 18.sp, textAlign = TextAlign.Center,
+                    fontWeight = if (sel) FontWeight.Medium else FontWeight.Normal,
+                    color = if (sel) Color.White else Ink,
+                )
             }
         }
     }
 }
+
+private val AnswerBad = Color(0xFFC9584B)
+private val AnswerMid = Color(0xFFD9A040)
+private val AnswerGood = Color(0xFF5F9E55)
+
+/** 0 = bad (red), 0.5 = in between (amber), 1 = good (green). */
+private fun answerColor(g: Float): Color =
+    if (g < 0.5f) lerp(AnswerBad, AnswerMid, g * 2f) else lerp(AnswerMid, AnswerGood, (g - 0.5f) * 2f)
 
 /** The 0–10 mood scale as two rows of big circles, with the chosen state described underneath. */
 @Composable

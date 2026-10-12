@@ -162,8 +162,8 @@ fun CheckInScreen(
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         Box(Modifier.reveal(0)) { JournalDateHeader(date, onDateChange) }
-        QuickCheckInButton(Modifier.reveal(1), onClick = onQuick)
-        if (Themes.showQuote) Box(Modifier.reveal(2)) { QuoteOfTheDay(Quotes.forDate(date)) }
+        if (Themes.showQuote) Box(Modifier.reveal(1)) { QuoteOfTheDay(Quotes.forDate(date)) }
+        QuickCheckInButton(Modifier.reveal(2), onClick = onQuick)
         var order = 3 // cards rise in one after another when the app opens
 
         for (section in data.sections) {
