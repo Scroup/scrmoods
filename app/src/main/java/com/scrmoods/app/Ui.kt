@@ -1,5 +1,6 @@
 package com.scrmoods.app
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,24 +45,70 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// ---------- palette: cocoa ink on blush paper, dusty rosewood accent ----------
-val Paper = Color(0xFFF7F0EC)      // screen background
-val Page = Color(0xFFFDF9F7)       // raised surfaces: chips, note page, dialogs
-val Ink = Color(0xFF3B2A25)        // main text
-val InkSoft = Color(0xFF8A736B)    // secondary text
-val InkFaint = Color(0xFFBBA79F)   // hints, disabled
-val Rule = Color(0xFFEADCD5)       // hairlines, outlines, ruled lines
-val Accent = Color(0xFFA0594F)     // rosewood: selections, headings, links
-val AccentWash = Color(0xFFF1DFD9) // light accent tint
+// ---------- themes: warm, soft palettes. Paper is the background, Page the lighter cards on it ----------
+data class Palette(
+    val id: String,
+    val name: String,
+    val paper: Color,
+    val page: Color,
+    val ink: Color,
+    val inkSoft: Color,
+    val inkFaint: Color,
+    val rule: Color,
+    val accent: Color,
+    val accentWash: Color,
+)
+
+object Themes {
+    val all = listOf(
+        Palette("rosewood", "Rosewood", Color(0xFFEFE4DF), Color(0xFFFCF8F6), Color(0xFF3B2A25), Color(0xFF86706A),
+            Color(0xFFB9A59D), Color(0xFFE3D3CC), Color(0xFFA0594F), Color(0xFFF0DCD5)),
+        Palette("sepia", "Sepia", Color(0xFFEADFCF), Color(0xFFFBF6EE), Color(0xFF4F3933), Color(0xFF85695A),
+            Color(0xFFBCA893), Color(0xFFE0D2BF), Color(0xFF945B46), Color(0xFFF0E0D0)),
+        Palette("honey", "Honey", Color(0xFFF3E3C8), Color(0xFFFFF9EE), Color(0xFF4F3933), Color(0xFF8C6B4E),
+            Color(0xFFC9AE86), Color(0xFFEBD8B6), Color(0xFFB0703F), Color(0xFFF8E6CB)),
+        Palette("sage", "Sage", Color(0xFFE6E3D3), Color(0xFFFAF8F0), Color(0xFF45382C), Color(0xFF7C7563),
+            Color(0xFFB3AE99), Color(0xFFDAD6C2), Color(0xFF6E7A52), Color(0xFFE6E9D6)),
+        Palette("cocoa", "Cocoa", Color(0xFFE6D8CE), Color(0xFFF8F1EB), Color(0xFF4F3933), Color(0xFF7E5F52),
+            Color(0xFFB39C8E), Color(0xFFDBC8BB), Color(0xFF6C4438), Color(0xFFEBDAD0)),
+        Palette("blush", "Blush", Color(0xFFF1E1DA), Color(0xFFFDF7F4), Color(0xFF5A3F33), Color(0xFF957068),
+            Color(0xFFC4A69D), Color(0xFFEBD5CC), Color(0xFFB0685C), Color(0xFFF5E1DA)),
+    )
+
+    var current by mutableStateOf(all[0])
+        private set
+
+    private const val PREFS = "look"
+
+    fun init(context: Context) {
+        val id = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("theme", null)
+        current = all.firstOrNull { it.id == id } ?: all[0]
+    }
+
+    fun select(context: Context, p: Palette) {
+        current = p
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("theme", p.id).apply()
+    }
+}
+
+// Colour names used across the app; they follow the chosen theme.
+val Paper: Color get() = Themes.current.paper           // screen background
+val Page: Color get() = Themes.current.page             // cards, note page, dialogs
+val Ink: Color get() = Themes.current.ink               // main text
+val InkSoft: Color get() = Themes.current.inkSoft       // secondary text
+val InkFaint: Color get() = Themes.current.inkFaint     // hints, disabled
+val Rule: Color get() = Themes.current.rule             // hairlines, outlines, ruled lines
+val Accent: Color get() = Themes.current.accent         // selections, headings, links
+val AccentWash: Color get() = Themes.current.accentWash // light accent tint
 val Danger = Color(0xFFA8463F)
 
 // Old names still used by some screens.
-val Purple = Accent
-val Teal = Accent
-val LinkBlue = Accent
-val TextDark = Ink
-val TextGray = InkSoft
-val Border = Rule
+val Purple: Color get() = Accent
+val Teal: Color get() = Accent
+val LinkBlue: Color get() = Accent
+val TextDark: Color get() = Ink
+val TextGray: Color get() = InkSoft
+val Border: Color get() = Rule
 
 // ---------- type: Lora, a calligraphic book serif (SIL Open Font License) ----------
 val Lora = FontFamily(
@@ -131,6 +178,7 @@ fun Segmented(
     minHeight: Int = 44,
     maxFont: Float = 14f,
     minFont: Float = 10.5f,
+    idleColor: Color = Paper,
 ) {
     var fontSize by remember(options, maxFont) { mutableStateOf(maxFont) }
     var settled by remember(options, maxFont) { mutableStateOf(false) }
@@ -145,7 +193,7 @@ fun Segmented(
                             .weight(1f)
                             .heightIn(min = minHeight.dp)
                             .clip(shape)
-                            .background(if (isSel) Accent else Page)
+                            .background(if (isSel) Accent else idleColor)
                             .border(1.dp, if (isSel) Accent else Rule, shape)
                             .clickable { onSelect(if (isSel) null else index) }
                             .padding(horizontal = 5.dp, vertical = 4.dp), // keeps text clear of the rounded edges
@@ -174,9 +222,14 @@ fun Segmented(
 
 /** Italic section title followed by a hairline, like a chapter heading in a notebook. */
 @Composable
-fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+fun SectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    horizontal: androidx.compose.ui.unit.Dp = 20.dp,
+    top: androidx.compose.ui.unit.Dp = 28.dp,
+) {
     Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 2.dp),
+        modifier.fillMaxWidth().padding(start = horizontal, end = horizontal, top = top, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

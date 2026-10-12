@@ -35,6 +35,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
@@ -56,21 +58,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
+        Themes.init(applicationContext)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
         setContent {
-            ScrmoodsTheme { App() }
+            ScrmoodsTheme {
+                // Status and navigation bars take the theme's paper colour.
+                val bar = Paper.toArgb()
+                SideEffect {
+                    window.statusBarColor = bar
+                    window.navigationBarColor = bar
+                }
+                App()
+            }
         }
     }
 }
 
-enum class Tab(val label: String) { CHECKIN("Journal"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Data") }
+enum class Tab(val label: String) { CHECKIN("Journal"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Settings") }
 
 private fun Tab.icon(): ImageVector = when (this) {
     Tab.CHECKIN -> Icons.Filled.CheckCircle
     Tab.CALENDAR -> Icons.Filled.DateRange
     Tab.GRAPH -> BarChartIcon
-    Tab.DATA -> Icons.AutoMirrored.Filled.List
+    Tab.DATA -> Icons.Filled.Settings
 }
 
 /** Which point editor dialog is open: a new point for [sectionId], or editing [existing]. */
@@ -103,7 +114,7 @@ fun App() {
     BackHandler(enabled = !manage && tab != Tab.CHECKIN) { tab = Tab.CHECKIN }
 
     Scaffold(
-        topBar = { TopBar(onSettings = { manage = true }) },
+        topBar = { TopBar() },
         bottomBar = {
             if (!manage) Column {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
@@ -174,9 +185,9 @@ fun App() {
 }
 
 @Composable
-private fun TopBar(onSettings: () -> Unit) {
+private fun TopBar() {
     Row(
-        Modifier.fillMaxWidth().background(Paper).height(56.dp).padding(start = 20.dp, end = 8.dp),
+        Modifier.fillMaxWidth().background(Paper).height(56.dp).padding(start = 24.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -184,8 +195,5 @@ private fun TopBar(onSettings: () -> Unit) {
             color = Accent, fontSize = 21.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onSettings) {
-            Icon(Icons.Filled.Settings, "Tracking points", tint = InkSoft)
-        }
     }
 }

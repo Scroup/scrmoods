@@ -12,6 +12,15 @@ enum class PointType(val xmlName: String, val title: String) {
     }
 }
 
+/** Which way is good for a tracking point. Drives the green / red colouring in Trends. */
+enum class Better(val xmlName: String) {
+    HIGHER("higher"), LOWER("lower"), NONE("none");
+
+    companion object {
+        fun fromXml(s: String?): Better? = entries.firstOrNull { it.xmlName == s }
+    }
+}
+
 data class Section(val id: String, val title: String)
 
 data class TrackingPoint(
@@ -30,6 +39,8 @@ data class TrackingPoint(
     val archived: Boolean = false,
     /** Daily reminder times as "HH:mm" (used for medications). */
     val reminders: List<String> = emptyList(),
+    /** For scales the last option is "higher"; for yes/no, Yes is "higher". */
+    val better: Better = Better.NONE,
 )
 
 data class TimedNote(val time: String, val text: String)
@@ -78,27 +89,27 @@ object Defaults {
 
     val points = listOf(
         TrackingPoint("outlook", Sections.DAILY, PointType.SCALE, "How was your overall outlook today?",
-            listOf("Negative", "Neutral", "Positive")),
-        TrackingPoint("productive", Sections.DAILY, PointType.SCALE, "How productive were you today?", freq),
-        TrackingPoint("motivated", Sections.DAILY, PointType.SCALE, "How motivated did you feel today?", freq),
-        TrackingPoint("lonely", Sections.DAILY, PointType.SCALE, "Did you feel lonely today?", freq),
-        TrackingPoint("depressed", Sections.DAILY, PointType.SCALE, "Did you feel depressed or hopeless today?", freq),
-        TrackingPoint("anxious", Sections.DAILY, PointType.SCALE, "Did you feel anxious today?", freq),
+            listOf("Negative", "Neutral", "Positive"), better = Better.HIGHER),
+        TrackingPoint("productive", Sections.DAILY, PointType.SCALE, "How productive were you today?", freq, better = Better.HIGHER),
+        TrackingPoint("motivated", Sections.DAILY, PointType.SCALE, "How motivated did you feel today?", freq, better = Better.HIGHER),
+        TrackingPoint("lonely", Sections.DAILY, PointType.SCALE, "Did you feel lonely today?", freq, better = Better.LOWER),
+        TrackingPoint("depressed", Sections.DAILY, PointType.SCALE, "Did you feel depressed or hopeless today?", freq, better = Better.LOWER),
+        TrackingPoint("anxious", Sections.DAILY, PointType.SCALE, "Did you feel anxious today?", freq, better = Better.LOWER),
 
         TrackingPoint("sleep_hours", Sections.HEALTH, PointType.NUMBER, "Last night's sleep",
             min = 0f, max = 16f, step = 0.5f, unit = "hrs"),
-        TrackingPoint("restful_sleep", Sections.HEALTH, PointType.YESNO, "Did you have a restful night's sleep?"),
-        TrackingPoint("nutrition", Sections.HEALTH, PointType.YESNO, "Have you met your nutrition needs today?"),
-        TrackingPoint("outside", Sections.HEALTH, PointType.YESNO, "Did you spend time outside?"),
-        TrackingPoint("exercise", Sections.HEALTH, PointType.YESNO, "Did you exercise today?"),
-        TrackingPoint("hygiene", Sections.HEALTH, PointType.YESNO, "Did you tend to your personal hygiene today?"),
+        TrackingPoint("restful_sleep", Sections.HEALTH, PointType.YESNO, "Did you have a restful night's sleep?", better = Better.HIGHER),
+        TrackingPoint("nutrition", Sections.HEALTH, PointType.YESNO, "Have you met your nutrition needs today?", better = Better.HIGHER),
+        TrackingPoint("outside", Sections.HEALTH, PointType.YESNO, "Did you spend time outside?", better = Better.HIGHER),
+        TrackingPoint("exercise", Sections.HEALTH, PointType.YESNO, "Did you exercise today?", better = Better.HIGHER),
+        TrackingPoint("hygiene", Sections.HEALTH, PointType.YESNO, "Did you tend to your personal hygiene today?", better = Better.HIGHER),
 
-        TrackingPoint("friends_family", Sections.SOCIAL, PointType.YESNO, "Did you spend quality time engaging with friends or family?"),
-        TrackingPoint("mindfulness", Sections.SOCIAL, PointType.YESNO, "Did you practice any kind of mindfulness or meditation?"),
-        TrackingPoint("therapy", Sections.SOCIAL, PointType.YESNO, "Did you have talk therapy today?"),
-        TrackingPoint("chores", Sections.SOCIAL, PointType.YESNO, "Did you accomplish any household chores or tasks?"),
-        TrackingPoint("news_media", Sections.SOCIAL, PointType.SCALE, "News and media exposure:", level),
-        TrackingPoint("social_media", Sections.SOCIAL, PointType.SCALE, "Social media exposure:", level),
+        TrackingPoint("friends_family", Sections.SOCIAL, PointType.YESNO, "Did you spend quality time engaging with friends or family?", better = Better.HIGHER),
+        TrackingPoint("mindfulness", Sections.SOCIAL, PointType.YESNO, "Did you practice any kind of mindfulness or meditation?", better = Better.HIGHER),
+        TrackingPoint("therapy", Sections.SOCIAL, PointType.YESNO, "Did you have talk therapy today?", better = Better.HIGHER),
+        TrackingPoint("chores", Sections.SOCIAL, PointType.YESNO, "Did you accomplish any household chores or tasks?", better = Better.HIGHER),
+        TrackingPoint("news_media", Sections.SOCIAL, PointType.SCALE, "News and media exposure:", level, better = Better.LOWER),
+        TrackingPoint("social_media", Sections.SOCIAL, PointType.SCALE, "Social media exposure:", level, better = Better.LOWER),
     )
 
     fun data() = AppData(sections, points, emptyMap())
@@ -117,3 +128,23 @@ fun TrackingPoint.display(value: String?): String {
 
 fun formatNumber(f: Float): String =
     if (f == f.toLong().toFloat()) f.toLong().toString() else String.format(java.util.Locale.US, "%.1f", f)
+
+/** Position of a value within the point's range: 0 = lowest option / No / minimum, 1 = highest. */
+fun TrackingPoint.fraction(v: Float): Float = when (type) {
+    PointType.SCALE -> if (options.size > 1) v / (options.size - 1) else 1f
+    PointType.YESNO -> v
+    PointType.NUMBER -> if (max > min) (v - min) / (max - min) else 0f
+    PointType.TEXT -> 0f
+}.coerceIn(0f, 1f)
+
+/** How good a value is, from 0 (bad) to 1 (good); null when the point has no good or bad direction. */
+fun TrackingPoint.goodness(v: Float): Float? = when (better) {
+    Better.HIGHER -> fraction(v)
+    Better.LOWER -> 1f - fraction(v)
+    Better.NONE -> null
+}
+
+/** Good/bad direction for points saved before this setting existed. */
+fun defaultBetter(id: String, type: PointType): Better =
+    Defaults.points.firstOrNull { it.id == id }?.better
+        ?: if (type == PointType.YESNO) Better.HIGHER else Better.NONE

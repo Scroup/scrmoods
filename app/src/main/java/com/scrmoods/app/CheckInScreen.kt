@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,7 +67,7 @@ private val longDateFmt = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getD
 fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     val today = LocalDate.now()
     Row(
-        Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
+        Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp, top = 12.dp, bottom = 6.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(Modifier.weight(1f)) {
@@ -104,6 +105,25 @@ fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     }
 }
 
+/** Space between a journal page's edge and its content. */
+private val Gutter = 14.dp
+
+/** One rounded "page" holding a section of the journal. */
+@Composable
+private fun JournalCard(bottomPadding: androidx.compose.ui.unit.Dp = 16.dp, content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(20.dp)
+    Column(
+        Modifier
+            .padding(start = 10.dp, end = 10.dp, top = 12.dp)
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Page)
+            .border(1.dp, Rule, shape)
+            .padding(bottom = bottomPadding),
+        content = content,
+    )
+}
+
 @Composable
 fun CheckInScreen(
     date: LocalDate,
@@ -122,26 +142,30 @@ fun CheckInScreen(
             val points = data.points.filter { it.sectionId == section.id && !it.archived }
             val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
             if (points.isEmpty() && !alwaysShown) continue
-            SectionHeader(section.title)
-            for (p in points) {
-                PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
-            }
-            when (section.id) {
-                Sections.CUSTOM -> LinkButton("+ Add custom tracking point", Modifier.padding(start = 8.dp, top = 6.dp)) {
-                    onAddPoint(Sections.CUSTOM)
+            JournalCard {
+                SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
+                for (p in points) {
+                    PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
                 }
-                Sections.MEDS -> Row(Modifier.padding(start = 8.dp, top = 6.dp)) {
-                    LinkButton("+ Add medication") { onAddPoint(Sections.MEDS) }
-                    LinkButton("Edit medications") { onManage() }
+                when (section.id) {
+                    Sections.CUSTOM -> LinkButton("+ Add custom tracking point", Modifier.padding(start = Gutter - 12.dp, top = 6.dp)) {
+                        onAddPoint(Sections.CUSTOM)
+                    }
+                    Sections.MEDS -> Row(Modifier.padding(start = Gutter - 12.dp, top = 6.dp)) {
+                        LinkButton("+ Add medication") { onAddPoint(Sections.MEDS) }
+                        LinkButton("Edit medications") { onManage() }
+                    }
                 }
             }
         }
 
-        SectionHeader("Today's note")
-        RuledNote(key, entry.note)
+        JournalCard(bottomPadding = 4.dp) {
+            SectionHeader("Today's note", horizontal = Gutter, top = 16.dp)
+            RuledNote(key, entry.note)
+        }
 
-        TimedNotes(key, entry)
-        Spacer(Modifier.height(32.dp))
+        JournalCard { TimedNotes(key, entry) }
+        Spacer(Modifier.height(28.dp))
     }
 }
 
@@ -149,7 +173,7 @@ fun CheckInScreen(
 fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (String?) -> Unit) {
     when (p.type) {
         // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
-        PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
             Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 18.dp, bottom = 8.dp))
             Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) })
         }
@@ -158,7 +182,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
 
         PointType.NUMBER -> NumberInput(p, value, dateKey, onChange)
 
-        PointType.TEXT -> Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        PointType.TEXT -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter)) {
             Question(p.label, Modifier.padding(top = 20.dp, bottom = 10.dp))
             // Typing is saved shortly after you stop, not on every key press.
             var text by remember(dateKey, p.id) { mutableStateOf(value ?: "") }
@@ -198,7 +222,7 @@ private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit,
     val selected = value?.toIntOrNull()
     if (!stacked) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
+            Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
@@ -212,7 +236,7 @@ private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit,
             Segmented(listOf("No", "Yes"), selected, { onChange(it?.toString()) }, Modifier.width(116.dp), minHeight = 40)
         }
     } else {
-        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp)) {
+        Column(Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 14.dp)) {
             Text(label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink)
             if (note.isNotEmpty()) ReminderNote(note)
             Segmented(
@@ -242,7 +266,7 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
     val sliderValue = if (dragging) pos else (stored ?: p.min)
     val hasValue = dragging || stored != null
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 20.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = Gutter).padding(top = 20.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(p.label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = Modifier.weight(1f).padding(bottom = 3.dp))
             if (hasValue) {
@@ -316,21 +340,18 @@ private fun RuledNote(dateKey: String, saved: String) {
         textStyle = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, color = Ink),
         cursorBrush = SolidColor(Accent),
         modifier = Modifier
-            .padding(start = 20.dp, end = 20.dp, top = 14.dp)
+            .padding(top = 6.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Page)
-            .border(1.dp, Rule, RoundedCornerShape(16.dp))
             .drawBehind {
                 val lh = lineHeight.toPx()
                 var y = padTop.toPx() + lh - lh * 0.16f
                 while (y < size.height - 6.dp.toPx()) {
-                    drawLine(Rule, Offset(16.dp.toPx(), y), Offset(size.width - 16.dp.toPx(), y), strokeWidth = 1.dp.toPx())
+                    drawLine(Rule, Offset(Gutter.toPx(), y), Offset(size.width - Gutter.toPx(), y), strokeWidth = 1.dp.toPx())
                     y += lh
                 }
             }
             .heightIn(min = 160.dp)
-            .padding(start = 18.dp, end = 18.dp, top = padTop, bottom = 12.dp),
+            .padding(start = Gutter + 2.dp, end = Gutter + 2.dp, top = padTop, bottom = 12.dp),
         decorationBox = { inner ->
             Box {
                 if (text.isEmpty()) Text(
@@ -348,10 +369,10 @@ private fun TimedNotes(dateKey: String, entry: DayEntry) {
     var addTimed by remember { mutableStateOf(false) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
 
-    SectionHeader("Through the day")
+    SectionHeader("Through the day", horizontal = Gutter, top = 16.dp)
     Column(Modifier.padding(top = 8.dp)) {
         entry.timedNotes.forEachIndexed { i, n ->
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp), verticalAlignment = Alignment.Top) {
+            Row(Modifier.fillMaxWidth().padding(start = Gutter, end = 4.dp, top = 6.dp), verticalAlignment = Alignment.Top) {
                 Text(
                     n.time.substringAfter(' '),
                     color = Accent, fontSize = 14.sp, fontStyle = FontStyle.Italic,
@@ -363,7 +384,7 @@ private fun TimedNotes(dateKey: String, entry: DayEntry) {
                 }
             }
         }
-        LinkButton("+ Add a timestamped note", Modifier.padding(start = 8.dp, top = 4.dp)) { addTimed = true }
+        LinkButton("+ Add a timestamped note", Modifier.padding(start = Gutter - 12.dp, top = 4.dp)) { addTimed = true }
     }
 
     if (addTimed) TextInputDialog(

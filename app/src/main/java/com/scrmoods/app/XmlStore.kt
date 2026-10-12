@@ -65,6 +65,7 @@ object XmlStore {
                 s.attribute(null, "unit", p.unit)
             }
             s.attribute(null, "archived", p.archived.toString())
+            s.attribute(null, "better", p.better.xmlName)
             for (o in p.options) {
                 nl(s, 3)
                 s.startTag(null, "option").text(o).endTag(null, "option")
@@ -151,6 +152,10 @@ object XmlStore {
                             step = p.getAttributeValue(null, "step")?.toFloatOrNull() ?: 1f,
                             unit = p.getAttributeValue(null, "unit") ?: "",
                             archived = p.getAttributeValue(null, "archived") == "true",
+                        )
+                        curPoint = curPoint.copy(
+                            better = Better.fromXml(p.getAttributeValue(null, "better"))
+                                ?: defaultBetter(curPoint.id, curPoint.type),
                         )
                         curOptions = mutableListOf()
                         curReminders = mutableListOf()

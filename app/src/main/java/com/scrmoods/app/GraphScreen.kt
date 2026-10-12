@@ -136,7 +136,7 @@ fun GraphScreen() {
 
         Segmented(
             ranges.map { it.second }, rangeIdx, { if (it != null) rangeIdx = it },
-            Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp), minHeight = 38,
+            Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp), minHeight = 38, idleColor = Page,
         )
 
         Column(
@@ -185,26 +185,120 @@ fun GraphScreen() {
             }
         }
 
-        // Overview of everything in the same period
+        // Overview of everything in the same period, laid out like the journal (removed points left out).
         SectionHeader("Everything, last ${ranges[rangeIdx].second}")
-        for (p in chartable.filter { !it.archived }) {
-            Row(
-                Modifier.fillMaxWidth().clickable { pointId = p.id }.padding(horizontal = 20.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(p.label, fontSize = 15.5.sp, lineHeight = 21.sp, color = Ink, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                Text(summary(p, stats(p, days)), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.widthIn(max = 170.dp))
-            }
-            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = Rule)
+        Text(
+            "Green is going well, red needs attention. Each square is a day" +
+                (if (nDays > 31) " (or a few days averaged)" else "") + ".",
+            fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 19.sp,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+        )
+        for (section in data.sections) {
+            val pts = chartable.filter { it.sectionId == section.id && !it.archived }
+            if (pts.isEmpty()) continue
+            Text(
+                section.title, fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 2.dp),
+            )
+            for (p in pts) OverviewRow(p, days, stats(p, days)) { pointId = p.id }
         }
         Spacer(Modifier.height(24.dp))
     }
 }
 
-/** Colours a value by its position in the point's range (low = red, high = green). */
-private fun moodColorFor(p: TrackingPoint, v: Float): Color {
-    val (lo, hi) = p.yRange()
-    return if (p.type == PointType.NUMBER) Teal else moodColor(((v - lo) / (hi - lo)).coerceIn(0f, 1f))
+/** Colours a value by how good it is (red → honey → green), or violet ink when the point has no direction. */
+private fun moodColorFor(p: TrackingPoint, v: Float): Color =
+    p.goodness(v)?.let { moodColor(it) } ?: Accent
+
+private enum class Verdict { GOOD, MIXED, BAD, NONE }
+
+private fun verdict(p: TrackingPoint, s: Stats?): Verdict {
+    if (s == null) return Verdict.NONE
+    val g = p.goodness(s.avg) ?: return Verdict.NONE
+    return when {
+        g >= 0.6f -> Verdict.GOOD
+        g <= 0.4f -> Verdict.BAD
+        else -> Verdict.MIXED
+    }
+}
+
+/** Short tag text: the usual answer ("Positive"), the yes-rate ("Yes 80%") or the average ("7.5 hrs"). */
+private fun tagText(p: TrackingPoint, s: Stats): String = when (p.type) {
+    PointType.SCALE -> p.options.getOrNull(s.avg.roundToInt()) ?: formatNumber(s.avg)
+    PointType.YESNO -> if (s.avg >= 0.5f) "Yes ${(s.avg * 100).roundToInt()}%" else "No ${((1 - s.avg) * 100).roundToInt()}%"
+    PointType.NUMBER -> "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " ${p.unit}" else ""
+    PointType.TEXT -> ""
+}
+
+@Composable
+private fun OverviewRow(p: TrackingPoint, days: List<LocalDate>, s: Stats?, onClick: () -> Unit) {
+    val v = verdict(p, s)
+    val tone = when (v) {
+        Verdict.GOOD -> GoodColor
+        Verdict.MIXED -> MidColor
+        Verdict.BAD -> BadColor
+        Verdict.NONE -> Accent
+    }
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Text(p.label, fontSize = 15.sp, lineHeight = 20.sp, color = Ink, modifier = Modifier.weight(1f).padding(end = 10.dp))
+            if (s == null) {
+                Text("no answers yet", fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = InkFaint)
+            } else {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        tagText(p, s),
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Ink,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(tone.copy(alpha = if (v == Verdict.NONE) 0.14f else 0.32f))
+                            .padding(horizontal = 10.dp, vertical = 2.dp),
+                    )
+                    Text(
+                        "${s.count} ${if (s.count == 1) "day" else "days"}",
+                        fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                        modifier = Modifier.padding(top = 2.dp, end = 4.dp),
+                    )
+                }
+            }
+        }
+        DayStrip(p, days, Modifier.padding(top = 8.dp))
+        if (v == Verdict.BAD) {
+            Text(
+                "Needs attention",
+                fontSize = 13.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Medium, color = Danger,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+    HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = Rule)
+}
+
+/** One small square per day (or per few days for long periods), coloured by how good the answer was. */
+@Composable
+private fun DayStrip(p: TrackingPoint, days: List<LocalDate>, modifier: Modifier = Modifier) {
+    val perCell = (days.size + 30) / 31
+    val cells = days.chunked(perCell.coerceAtLeast(1)).map { chunk ->
+        val vals = chunk.mapNotNull { p.numeric(Repo.data.entries[it.toString()]?.values?.get(p.id)) }
+        if (vals.isEmpty()) null else vals.average().toFloat()
+    }
+    Row(modifier.fillMaxWidth().height(10.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        for (c in cells) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (c == null) Rule.copy(alpha = 0.6f)
+                        else p.goodness(c)?.let { moodColor(it) } ?: Accent.copy(alpha = 0.25f + 0.6f * p.fraction(c)),
+                    ),
+            )
+        }
+    }
 }
 
 @Composable

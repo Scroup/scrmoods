@@ -30,6 +30,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
@@ -55,6 +63,9 @@ fun DataScreen(onManage: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
+        SectionHeader("Appearance")
+        ThemePicker()
+
         SectionHeader("Your journal")
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
             val logged = data.entries.size
@@ -120,5 +131,54 @@ fun DataScreen(onManage: () -> Unit) {
                 }
             },
         )
+    }
+}
+
+/** A row of theme swatches: each shows the background, a card and the accent colour. */
+@Composable
+private fun ThemePicker() {
+    val context = LocalContext.current
+    val current = Themes.current
+    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
+        for (row in Themes.all.chunked(3)) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                for (t in row) {
+                    val selected = t.id == current.id
+                    val shape = RoundedCornerShape(16.dp)
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(shape)
+                            .background(t.paper)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) t.accent else t.rule, shape)
+                            .clickable { Themes.select(context, t) }
+                            .padding(8.dp),
+                    ) {
+                        // a tiny journal page: a card with two lines and an accent pill
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(t.page)
+                                .border(1.dp, t.rule, RoundedCornerShape(10.dp)).padding(8.dp),
+                        ) {
+                            Box(Modifier.fillMaxWidth(0.8f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(t.ink.copy(alpha = 0.75f)))
+                            Spacer(Modifier.height(5.dp))
+                            Box(Modifier.fillMaxWidth(0.55f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(t.inkSoft.copy(alpha = 0.6f)))
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(Modifier.width(22.dp).height(10.dp).clip(RoundedCornerShape(5.dp)).background(t.accent))
+                                Box(Modifier.width(22.dp).height(10.dp).clip(RoundedCornerShape(5.dp)).background(t.paper).border(1.dp, t.rule, RoundedCornerShape(5.dp)))
+                            }
+                        }
+                        Text(
+                            t.name,
+                            fontSize = 13.5.sp,
+                            fontStyle = if (selected) FontStyle.Normal else FontStyle.Italic,
+                            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                            color = t.ink,
+                            modifier = Modifier.padding(top = 6.dp, start = 2.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }

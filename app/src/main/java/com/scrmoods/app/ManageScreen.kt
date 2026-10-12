@@ -196,6 +196,7 @@ fun PointEditorDialog(
     var unit by remember { mutableStateOf(existing?.unit ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
     var reminders by remember { mutableStateOf(existing?.reminders ?: emptyList()) }
+    var better by remember { mutableStateOf(existing?.better ?: Better.HIGHER) }
     val context = LocalContext.current
     val isMed = sectionId == Sections.MEDS
 
@@ -221,6 +222,7 @@ fun PointEditorDialog(
             min = mn ?: 0f, max = mx ?: 10f, step = st ?: 1f,
             unit = if (type == PointType.NUMBER) unit.trim() else "",
             reminders = if (type == PointType.YESNO) reminders.distinct().sorted() else emptyList(),
+            better = if (type == PointType.TEXT) Better.NONE else better,
         )
     }
 
@@ -294,6 +296,22 @@ fun PointEditorDialog(
                         singleLine = true,
                         colors = journalFieldColors(),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                }
+                if (type != PointType.TEXT) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Which is better?", fontSize = 14.sp, color = TextGray)
+                    val labels = when (type) {
+                        PointType.YESNO -> listOf("Yes is good", "No is good", "Neither")
+                        PointType.SCALE -> listOf("Later options are better", "Earlier options are better", "Neither")
+                        else -> listOf("Higher is better", "Lower is better", "Neither")
+                    }
+                    listOf(Better.HIGHER, Better.LOWER, Better.NONE).forEachIndexed { i, b ->
+                        RadioRow(labels[i], better == b) { better = b }
+                    }
+                    Text(
+                        "Used to colour Trends green when it's going well and red when it needs attention.",
+                        fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 17.sp,
                     )
                 }
                 if (type == PointType.YESNO) {
