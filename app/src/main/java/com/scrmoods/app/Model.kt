@@ -28,6 +28,8 @@ data class TrackingPoint(
     val unit: String = "",
     /** Removed points are hidden from the check-in but their past data is kept. */
     val archived: Boolean = false,
+    /** Daily reminder times as "HH:mm" (used for medications). */
+    val reminders: List<String> = emptyList(),
 )
 
 data class TimedNote(val time: String, val text: String)

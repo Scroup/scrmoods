@@ -1,5 +1,7 @@
 package com.scrmoods.app
 
+import android.app.TimePickerDialog
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -38,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontStyle
@@ -82,6 +86,7 @@ fun ManageScreen(
                         Column(Modifier.weight(1f).clickable { onEdit(p) }) {
                             Text(p.label, fontSize = 15.sp, lineHeight = 20.sp, color = Ink)
                             Text(typeSummary(p), fontSize = 13.sp, color = InkSoft)
+                            if (p.reminders.isNotEmpty()) Text(Reminders.describe(p.reminders), fontSize = 13.sp, fontStyle = FontStyle.Italic, color = Accent)
                         }
                         SmallIcon(Icons.Filled.KeyboardArrowUp, "Move up", enabled = i > 0) { Repo.move(p.id, -1) }
                         SmallIcon(Icons.Filled.KeyboardArrowDown, "Move down", enabled = i < points.size - 1) { Repo.move(p.id, 1) }
@@ -190,6 +195,8 @@ fun PointEditorDialog(
     var step by remember { mutableStateOf(formatNumber(existing?.step ?: 1f)) }
     var unit by remember { mutableStateOf(existing?.unit ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
+    var reminders by remember { mutableStateOf(existing?.reminders ?: emptyList()) }
+    val context = LocalContext.current
     val isMed = sectionId == Sections.MEDS
 
     fun build(): TrackingPoint? {
@@ -213,6 +220,7 @@ fun PointEditorDialog(
             options = if (type == PointType.SCALE) opts else emptyList(),
             min = mn ?: 0f, max = mx ?: 10f, step = st ?: 1f,
             unit = if (type == PointType.NUMBER) unit.trim() else "",
+            reminders = if (type == PointType.YESNO) reminders.distinct().sorted() else emptyList(),
         )
     }
 
@@ -287,6 +295,30 @@ fun PointEditorDialog(
                         colors = journalFieldColors(),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
+                }
+                if (type == PointType.YESNO) {
+                    Spacer(Modifier.height(14.dp))
+                    Text("Remind me", fontSize = 14.sp, color = TextGray)
+                    Text(
+                        if (isMed) "A notification at each time, every day. Tap Taken in it to tick this off."
+                        else "A notification at each time, every day.",
+                        fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 17.sp,
+                    )
+                    for (t in reminders) {
+                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(t, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Accent, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { reminders = reminders - t }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Close, "Remove reminder", tint = InkFaint, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                    LinkButton("+ Add a time", Modifier.padding(top = 2.dp)) {
+                        TimePickerDialog(
+                            context,
+                            { _, h, m -> reminders = (reminders + String.format(java.util.Locale.US, "%02d:%02d", h, m)).distinct().sorted() },
+                            8, 0, DateFormat.is24HourFormat(context),
+                        ).show()
+                    }
                 }
                 error?.let { Text(it, color = Danger, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
             }

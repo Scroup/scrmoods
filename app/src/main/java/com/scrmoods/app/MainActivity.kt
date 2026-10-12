@@ -1,6 +1,11 @@
 package com.scrmoods.app
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -39,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +56,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
+        Reminders.ensureChannel(applicationContext)
+        Reminders.scheduleAll(applicationContext)
         setContent {
             ScrmoodsTheme { App() }
         }
@@ -74,6 +82,22 @@ fun App() {
     var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var manage by rememberSaveable { mutableStateOf(false) }
     var editor by remember { mutableStateOf<EditorRequest?>(null) }
+    val context = LocalContext.current
+
+    // Asked the first time you set a reminder (Android 13+ needs permission to show notifications).
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(
+            context, "Notifications are off, so reminders can't appear. You can turn them on in Settings → Apps → scrmoods.",
+            Toast.LENGTH_LONG,
+        ).show()
+    }
+    fun askForNotificationsIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(context)) {
+            notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (!Reminders.canNotify(context)) {
+            Toast.makeText(context, "Notifications are off for scrmoods. Turn them on in Settings to get reminders.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     BackHandler(enabled = manage) { manage = false }
     BackHandler(enabled = !manage && tab != Tab.CHECKIN) { tab = Tab.CHECKIN }
@@ -133,6 +157,7 @@ fun App() {
             onSave = { p ->
                 if (req.existing == null) Repo.addPoint(p) else Repo.editPoint(p)
                 editor = null
+                if (p.reminders.isNotEmpty()) askForNotificationsIfNeeded()
             },
         )
     }

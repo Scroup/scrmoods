@@ -16,6 +16,9 @@ import java.io.OutputStream
  *     <point id="outlook" section="daily" type="scale" label="How was your overall outlook today?" archived="false">
  *       <option>Negative</option><option>Neutral</option><option>Positive</option>
  *     </point>
+ *     <point id="med_x" section="meds" type="yesno" label="Vitamin D" archived="false">
+ *       <reminder time="08:00"/>
+ *     </point>
  *     <point id="sleep_hours" section="health" type="number" label="Last night's sleep" min="0" max="16" step="0.5" unit="hrs" archived="false"/>
  *   </points>
  *   <entries>
@@ -66,7 +69,11 @@ object XmlStore {
                 nl(s, 3)
                 s.startTag(null, "option").text(o).endTag(null, "option")
             }
-            if (p.options.isNotEmpty()) nl(s, 2)
+            for (r in p.reminders) {
+                nl(s, 3)
+                s.startTag(null, "reminder").attribute(null, "time", r).endTag(null, "reminder")
+            }
+            if (p.options.isNotEmpty() || p.reminders.isNotEmpty()) nl(s, 2)
             s.endTag(null, "point")
         }
         nl(s, 1); s.endTag(null, "points")
@@ -119,6 +126,7 @@ object XmlStore {
 
         var curPoint: TrackingPoint? = null
         var curOptions = mutableListOf<String>()
+        var curReminders = mutableListOf<String>()
         var curEntry: DayEntry? = null
         var curValues = linkedMapOf<String, String>()
         var curTimed = mutableListOf<TimedNote>()
@@ -145,8 +153,10 @@ object XmlStore {
                             archived = p.getAttributeValue(null, "archived") == "true",
                         )
                         curOptions = mutableListOf()
+                        curReminders = mutableListOf()
                     }
                     "option" -> curOptions += p.nextText()
+                    "reminder" -> p.getAttributeValue(null, "time")?.let { if (Reminders.isValidTime(it)) curReminders += it }
                     "entry" -> {
                         curEntry = DayEntry(p.getAttributeValue(null, "date") ?: "")
                         curValues = linkedMapOf()
@@ -165,7 +175,7 @@ object XmlStore {
                 }
                 XmlPullParser.END_TAG -> when (p.name) {
                     "point" -> {
-                        curPoint?.let { if (it.id.isNotEmpty()) points += it.copy(options = curOptions.toList()) }
+                        curPoint?.let { if (it.id.isNotEmpty()) points += it.copy(options = curOptions.toList(), reminders = curReminders.toList()) }
                         curPoint = null
                     }
                     "entry" -> {

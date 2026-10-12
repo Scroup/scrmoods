@@ -20,6 +20,7 @@ If the build fails, open the failed run in the Actions tab and copy the red erro
 - **Calendar**: month view with a coloured dot per logged day (red → green by overall outlook). Tap a day to open it.
 - **Graph**: choose any tracking point and a period (7 days to 1 year) to see a chart, the average, the yes %, how often each answer was picked, and a summary of all points.
 - **Data**: export the XML file (backup, or to analyse on a computer) and import it back.
+- **Medication reminders** (Android only): when adding or editing a medication (or any yes/no point), use *Remind me → + Add a time*. You get a notification at each time every day, with **Taken** (ticks it off for today) and **Snooze 15 min**. No reminder appears if it's already ticked off. Reminders survive restarts and app updates. The first time you add one, Android asks to allow notifications.
 - **⚙ Tracking points**: add your own points (scale with your own options, yes/no, number slider, or text), edit, reorder, or remove any point, built-in ones included. Removed points are hidden but their history is kept (and they can be restored); *Delete forever* also erases their answers.
 
 ## The data file

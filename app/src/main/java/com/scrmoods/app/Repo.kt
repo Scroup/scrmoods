@@ -22,8 +22,12 @@ object Repo {
 
     val filePath: String get() = file.absolutePath
 
+    private var appContext: Context? = null
+
+    @Synchronized
     fun init(context: Context) {
         if (::file.isInitialized) return
+        appContext = context.applicationContext
         file = File(context.filesDir, FILE_NAME)
         if (file.exists()) {
             try {
@@ -60,6 +64,16 @@ object Repo {
         }
     }
 
+    /** Waits until everything is written to disk (used by the notification "Taken" button). */
+    fun flush() {
+        writer.submit {}.get()
+    }
+
+    /** Medication reminders follow the tracking points, so re-set the alarms whenever points change. */
+    private fun pointsChanged() {
+        appContext?.let { Reminders.scheduleAll(it) }
+    }
+
     // ---------- day values ----------
 
     fun entry(date: String): DayEntry = data.entries[date] ?: DayEntry(date)
@@ -90,23 +104,31 @@ object Repo {
 
     // ---------- tracking points ----------
 
-    fun addPoint(p: TrackingPoint) = update { it.copy(points = it.points + p) }
-
-    fun editPoint(p: TrackingPoint) = update { d ->
-        d.copy(points = d.points.map { if (it.id == p.id) p else it })
+    fun addPoint(p: TrackingPoint) {
+        update { it.copy(points = it.points + p) }
+        pointsChanged()
     }
 
-    fun setArchived(id: String, archived: Boolean) = update { d ->
-        d.copy(points = d.points.map { if (it.id == id) it.copy(archived = archived) else it })
+    fun editPoint(p: TrackingPoint) {
+        update { d -> d.copy(points = d.points.map { if (it.id == p.id) p else it }) }
+        pointsChanged()
+    }
+
+    fun setArchived(id: String, archived: Boolean) {
+        update { d -> d.copy(points = d.points.map { if (it.id == id) it.copy(archived = archived) else it }) }
+        pointsChanged()
     }
 
     /** Removes the point and every answer ever given for it. */
-    fun deleteForever(id: String) = update { d ->
-        d.copy(
-            points = d.points.filter { it.id != id },
-            entries = d.entries.mapValues { (_, e) -> e.copy(values = e.values - id) }
-                .filterValues { !it.isEmpty },
-        )
+    fun deleteForever(id: String) {
+        update { d ->
+            d.copy(
+                points = d.points.filter { it.id != id },
+                entries = d.entries.mapValues { (_, e) -> e.copy(values = e.values - id) }
+                    .filterValues { !it.isEmpty },
+            )
+        }
+        pointsChanged()
     }
 
     /** Moves a point up (-1) or down (+1) among the active points of its section. */
@@ -134,9 +156,15 @@ object Repo {
         val d = XmlStore.read(input)
         data = d
         save()
+        pointsChanged()
     }
 
-    fun resetSetupToDefaults() = update { d ->
+    fun resetSetupToDefaults() {
+        resetPoints()
+        pointsChanged()
+    }
+
+    private fun resetPoints() = update { d ->
         // Keeps all answers; restores built-in questions that were removed.
         val ids = d.points.map { it.id }.toSet()
         val restored = d.points.map { p ->

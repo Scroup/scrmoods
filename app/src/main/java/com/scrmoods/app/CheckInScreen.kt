@@ -154,7 +154,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
             Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) })
         }
 
-        PointType.YESNO -> YesNoRow(p.label, value, onChange)
+        PointType.YESNO -> YesNoRow(p.label, value, onChange, Reminders.describe(p.reminders))
 
         PointType.NUMBER -> NumberInput(p, value, dateKey, onChange)
 
@@ -192,7 +192,7 @@ private fun Question(label: String, modifier: Modifier) {
  * more than two lines there, it takes the full width instead, with the buttons underneath.
  */
 @Composable
-private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit) {
+private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit, note: String = "") {
     var stacked by remember(label) { mutableStateOf(false) }
     var decided by remember(label) { mutableStateOf(false) }
     val selected = value?.toIntOrNull()
@@ -201,25 +201,31 @@ private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit)
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink,
-                onTextLayout = { if (it.lineCount > 2) stacked = true else decided = true },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 12.dp)
-                    .drawWithContent { if (decided) drawContent() },
-            )
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(
+                    label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink,
+                    onTextLayout = { if (it.lineCount > 2) stacked = true else decided = true },
+                    modifier = Modifier.drawWithContent { if (decided) drawContent() },
+                )
+                if (note.isNotEmpty()) ReminderNote(note)
+            }
             Segmented(listOf("No", "Yes"), selected, { onChange(it?.toString()) }, Modifier.width(116.dp), minHeight = 40)
         }
     } else {
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp)) {
             Text(label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink)
+            if (note.isNotEmpty()) ReminderNote(note)
             Segmented(
                 listOf("No", "Yes"), selected, { onChange(it?.toString()) },
                 Modifier.align(Alignment.End).padding(top = 8.dp).width(116.dp), minHeight = 40,
             )
         }
     }
+}
+
+@Composable
+private fun ReminderNote(text: String) {
+    Text(text, fontSize = 13.sp, fontStyle = FontStyle.Italic, color = Accent, modifier = Modifier.padding(top = 2.dp))
 }
 
 @Composable
