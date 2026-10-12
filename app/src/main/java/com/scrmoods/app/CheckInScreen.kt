@@ -232,7 +232,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
             Question(p.label, Modifier.padding(top = 16.dp, bottom = 10.dp))
             // Typing is saved shortly after you stop, not on every key press.
             var text by remember(dateKey, p.id) { mutableStateOf(value ?: "") }
-            LaunchedEffect(text) {
+            LaunchedEffect(dateKey, text) {
                 if (text != (value ?: "")) {
                     delay(700)
                     onChange(text.ifBlank { null })
@@ -349,35 +349,52 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
     }
 }
 
+/** What's typed in one day's note, kept per day so one day's text can never be saved into another day. */
+private class NoteDraft(initial: String) {
+    var text by mutableStateOf(initial)
+    var known by mutableStateOf(initial) // the note as this field last saved or saw it
+    var dirty = false                    // typed since the last save
+}
+
 /** The day's note, written straight onto ruled notebook lines. Saved shortly after you stop typing. */
 @Composable
 private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = null) {
     val focus = LocalFocusManager.current
-    var text by remember(dateKey) { mutableStateOf(saved) }
-    // The note as this field last saved it. If the stored note differs, it was changed from
-    // outside (a quick note from the widget), so show the new version.
-    var known by remember(dateKey) { mutableStateOf(saved) }
-    if (saved != known) {
-        text = saved
-        known = saved
+    val draft = remember(dateKey) { NoteDraft(saved) }
+    // If the stored note changed from outside (a quick note from the widget), show the new version.
+    if (saved != draft.known) {
+        draft.text = saved
+        draft.known = saved
+        draft.dirty = false
     }
-    // Save anything still pending when you turn to another day.
-    val latest by rememberUpdatedState(text)
+    fun save() {
+        draft.known = draft.text.trim()
+        draft.dirty = false
+        Repo.setNote(dateKey, draft.text)
+    }
+    // Leaving the day (another date, another tab): save it if something was typed and not saved yet.
+    // Uses this day's own draft and date, captured when the day was opened.
     DisposableEffect(dateKey) {
-        onDispose { if (latest.trim() != (Repo.data.entries[dateKey]?.note ?: "")) Repo.setNote(dateKey, latest) }
+        val day = dateKey
+        val d = draft
+        onDispose {
+            if (d.dirty) {
+                d.dirty = false
+                Repo.setNote(day, d.text)
+            }
+        }
     }
-    LaunchedEffect(dateKey, text) {
-        if (text.trim() != saved) {
+    LaunchedEffect(dateKey, draft.text) {
+        if (draft.dirty) {
             delay(600)
-            known = text.trim()
-            Repo.setNote(dateKey, text)
+            save()
         }
     }
     val lineHeight = 28.sp
     val padTop = 10.dp
     BasicTextField(
-        value = text,
-        onValueChange = { text = it },
+        value = draft.text,
+        onValueChange = { draft.text = it; draft.dirty = true },
         textStyle = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, color = Ink),
         cursorBrush = SolidColor(Accent),
         modifier = Modifier
@@ -395,7 +412,7 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
             .padding(start = Gutter + 2.dp, end = Gutter + 2.dp, top = padTop, bottom = 12.dp),
         decorationBox = { inner ->
             Box {
-                if (text.isEmpty()) Text(
+                if (draft.text.isEmpty()) Text(
                     "Write about your day…",
                     style = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, fontStyle = FontStyle.Italic, color = InkFaint),
                 )
@@ -406,8 +423,7 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
     if (onFinish != null) {
         val done = GoodNight.finished == dateKey
         FinishDayButton(done = done) {
-            known = text.trim()
-            Repo.setNote(dateKey, text)   // save right away, don't wait for the pause in typing
+            save()                        // save right away, don't wait for the pause in typing
             focus.clearFocus()            // closes the keyboard
             if (!done) onFinish()         // the good night only comes once a day
         }
