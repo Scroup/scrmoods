@@ -64,22 +64,21 @@ data class Palette(
 )
 
 object Themes {
-    /** Eight distinct, soft palettes; each has its own hue and a brighter accent. */
+    /** Seven distinct, soft palettes; each has its own hue and accent. */
     val all = listOf(
         Palette("rosewood", "Rosewood", Color(0xFFF3E1DC), Color(0xFFFFF8F5), Color(0xFF3B2A25), Color(0xFF8A6B63),
             Color(0xFFC2A49B), Color(0xFFEBCFC6), Color(0xFFC0584A), Color(0xFFF9DCD3)),
         Palette("peach", "Peach", Color(0xFFFCE3CF), Color(0xFFFFF8F1), Color(0xFF43291C), Color(0xFF93684F),
             Color(0xFFCFA588), Color(0xFFF3D0B5), Color(0xFFDB6E35), Color(0xFFFFE0CB)),
-        Palette("butter", "Butter", Color(0xFFFAEDC4), Color(0xFFFFFBEC), Color(0xFF3F3215), Color(0xFF85714A),
-            Color(0xFFC4AE7A), Color(0xFFEEDDA8), Color(0xFFB57E0E), Color(0xFFFBEAB6)),
+        // the original Sepia: parchment with a brown accent
+        Palette("sepia", "Sepia", Color(0xFFEADFCF), Color(0xFFFBF6EE), Color(0xFF4F3933), Color(0xFF85695A),
+            Color(0xFFBCA893), Color(0xFFE0D2BF), Color(0xFF945B46), Color(0xFFF0E0D0)),
         Palette("matcha", "Matcha", Color(0xFFE3EDD8), Color(0xFFF9FCF4), Color(0xFF26331F), Color(0xFF5F7351),
             Color(0xFFA2B393), Color(0xFFCFDDBF), Color(0xFF5C8A3E), Color(0xFFDDEDCC)),
         Palette("lavender", "Lavender", Color(0xFFECE3F4), Color(0xFFFCF9FF), Color(0xFF33263F), Color(0xFF77648A),
             Color(0xFFB4A5C4), Color(0xFFDED0EC), Color(0xFF8A5BB8), Color(0xFFEBDCF7)),
         Palette("berry", "Berry", Color(0xFFF7DFE8), Color(0xFFFFF7FA), Color(0xFF3D2030), Color(0xFF8F5F74),
             Color(0xFFC99AAD), Color(0xFFEFC9D7), Color(0xFFC24A7C), Color(0xFFFBD9E6)),
-        Palette("sepia", "Sepia", Color(0xFFEADCC6), Color(0xFFFAF4EA), Color(0xFF4A3428), Color(0xFF85695A),
-            Color(0xFFBCA48C), Color(0xFFDECDB4), Color(0xFF8E5A3C), Color(0xFFEFDCC5)),
         Palette("night", "Night", Color(0xFF221A17), Color(0xFF2E2420), Color(0xFFF1E4DC), Color(0xFFBCA79C),
             Color(0xFF7E6B62), Color(0xFF44362F), Color(0xFFE39A7E), Color(0xFF4A3129),
             onAccent = Color(0xFF2A1C17), dark = true),
@@ -98,7 +97,7 @@ object Themes {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // themes from earlier versions map to their closest new one
         val saved = when (val id = prefs.getString("theme", null)) {
-            "honey" -> "butter"; "sage" -> "matcha"; "cocoa" -> "sepia"; "blush" -> "berry"; else -> id
+            "honey", "butter" -> "sepia"; "sage" -> "matcha"; "cocoa" -> "sepia"; "blush" -> "berry"; else -> id
         }
         current = all.firstOrNull { it.id == saved } ?: all[0]
         showQuote = prefs.getBoolean("quote", true)
