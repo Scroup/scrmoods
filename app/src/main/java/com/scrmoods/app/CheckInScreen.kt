@@ -153,6 +153,7 @@ fun CheckInScreen(
     onDateChange: (LocalDate) -> Unit,
     onAddPoint: (sectionId: String) -> Unit,
     onManage: () -> Unit,
+    onQuick: () -> Unit = {},
 ) {
     val data = Repo.data
     val key = date.toString()
@@ -161,8 +162,9 @@ fun CheckInScreen(
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         Box(Modifier.reveal(0)) { JournalDateHeader(date, onDateChange) }
-        if (Themes.showQuote) Box(Modifier.reveal(1)) { QuoteOfTheDay(Quotes.forDate(date)) }
-        var order = 2 // cards rise in one after another when the app opens
+        QuickCheckInButton(Modifier.reveal(1), onClick = onQuick)
+        if (Themes.showQuote) Box(Modifier.reveal(2)) { QuoteOfTheDay(Quotes.forDate(date)) }
+        var order = 3 // cards rise in one after another when the app opens
 
         for (section in data.sections) {
             if (section.hidden) continue
@@ -188,7 +190,8 @@ fun CheckInScreen(
             if (points.isEmpty() && !alwaysShown) continue
             JournalCard(order = order++) {
                 SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
-                for (p in points) {
+                points.forEachIndexed { i, p ->
+                    if (i > 0) QuestionDivider()
                     PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
                 }
                 when (section.id) {
@@ -217,7 +220,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
     when (p.type) {
         // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
         PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
-            Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 18.dp, bottom = 8.dp))
+            Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 10.dp))
             Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) }, playful = true)
         }
 
@@ -226,7 +229,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
         PointType.NUMBER -> NumberInput(p, value, dateKey, onChange)
 
         PointType.TEXT -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter)) {
-            Question(p.label, Modifier.padding(top = 20.dp, bottom = 10.dp))
+            Question(p.label, Modifier.padding(top = 16.dp, bottom = 10.dp))
             // Typing is saved shortly after you stop, not on every key press.
             var text by remember(dateKey, p.id) { mutableStateOf(value ?: "") }
             LaunchedEffect(text) {
@@ -254,40 +257,26 @@ private fun Question(label: String, modifier: Modifier) {
     Text(label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = modifier)
 }
 
-/**
- * A yes/no question. Short questions sit beside the No/Yes buttons; if a question would need
- * more than two lines there, it takes the full width instead, with the buttons underneath.
- */
+/** A yes/no question: the question on top, the No / Yes buttons right underneath it, like every other question. */
 @Composable
 private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit, note: String = "") {
-    var stacked by remember(label) { mutableStateOf(false) }
-    var decided by remember(label) { mutableStateOf(false) }
-    val selected = value?.toIntOrNull()
-    if (!stacked) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(
-                    label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink,
-                    onTextLayout = { if (it.lineCount > 2) stacked = true else decided = true },
-                    modifier = Modifier.drawWithContent { if (decided) drawContent() },
-                )
-                if (note.isNotEmpty()) ReminderNote(note)
-            }
-            Segmented(listOf("No", "Yes"), selected, { onChange(it?.toString()) }, Modifier.width(116.dp), minHeight = 40, playful = true)
-        }
-    } else {
-        Column(Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 14.dp)) {
-            Text(label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink)
-            if (note.isNotEmpty()) ReminderNote(note)
-            Segmented(
-                listOf("No", "Yes"), selected, { onChange(it?.toString()) },
-                Modifier.align(Alignment.End).padding(top = 8.dp).width(116.dp), minHeight = 40, playful = true,
-            )
-        }
+    Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
+        Question(label, Modifier.padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = if (note.isEmpty()) 10.dp else 0.dp))
+        if (note.isNotEmpty()) Box(Modifier.padding(start = 4.dp, bottom = 10.dp)) { ReminderNote(note) }
+        Segmented(listOf("No", "Yes"), value?.toIntOrNull(), { onChange(it?.toString()) }, playful = true)
     }
+}
+
+/** A faint line between questions, so it's clear which answers belong to which question. */
+@Composable
+private fun QuestionDivider() {
+    Box(
+        Modifier
+            .padding(start = Gutter, end = Gutter, top = 18.dp)
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Rule.copy(alpha = 0.7f)),
+    )
 }
 
 @Composable
@@ -309,7 +298,7 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
     val sliderValue = if (dragging) pos else (stored ?: p.min)
     val hasValue = dragging || stored != null
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = Gutter).padding(top = 20.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = Gutter).padding(top = 16.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(p.label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = Modifier.weight(1f).padding(bottom = 3.dp))
             if (hasValue) {
@@ -414,15 +403,18 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
             }
         },
     )
-    if (onFinish != null) FinishDayButton(done = GoodNight.finished == dateKey) {
-        known = text.trim()
-        Repo.setNote(dateKey, text)   // save right away, don't wait for the pause in typing
-        focus.clearFocus()            // closes the keyboard
-        onFinish()
+    if (onFinish != null) {
+        val done = GoodNight.finished == dateKey
+        FinishDayButton(done = done) {
+            known = text.trim()
+            Repo.setNote(dateKey, text)   // save right away, don't wait for the pause in typing
+            focus.clearFocus()            // closes the keyboard
+            if (!done) onFinish()         // the good night only comes once a day
+        }
     }
 }
 
-/** Under the note: ends the day with the good-night celebration. After that it shows the day is done (tap to see it again). */
+/** Under the note: ends the day with the good-night celebration. After that it shows the day is done (tapping it then just saves). */
 @Composable
 private fun FinishDayButton(done: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)

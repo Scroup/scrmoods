@@ -110,6 +110,7 @@ fun App() {
     var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var manage by rememberSaveable { mutableStateOf(false) }
     var editor by remember { mutableStateOf<EditorRequest?>(null) }
+    var quick by rememberSaveable { mutableStateOf<String?>(null) } // the day open in the quick check-in
     val context = LocalContext.current
 
     // Asked the first time you set a reminder (Android 13+ needs permission to show notifications).
@@ -178,6 +179,7 @@ fun App() {
                     onDateChange = { date = if (it > LocalDate.now()) LocalDate.now() else it },
                     onAddPoint = { editor = EditorRequest(it, null) },
                     onManage = { manage = true },
+                    onQuick = { quick = date.toString() },
                 )
                 Tab.CALENDAR -> CalendarScreen(date) { date = it; tab = Tab.CHECKIN }
                 Tab.GRAPH -> GraphScreen()
@@ -185,6 +187,9 @@ fun App() {
             }
         }
     }
+
+    quick?.let { d -> QuickCheckIn(d) { quick = null } }
+    BackHandler(enabled = quick != null) { quick = null }
 
     editor?.let { req ->
         PointEditorDialog(
