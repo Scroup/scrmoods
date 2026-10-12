@@ -127,6 +127,9 @@ fun DataScreen(onManage: () -> Unit) {
         SettingSwitch("Vibrate on tap", "A soft click of vibration when you tap buttons and answers.", Haptics.enabled) {
             Haptics.setEnabled(context, it)
         }
+        SettingSwitch("Welcome when opening", "A short greeting, then the journal rises into place.", Intro.enabled) {
+            Intro.setEnabled(context, it)
+        }
         SettingSwitch("Stars when answering", "Answer buttons squish when tapped and pop out little stars.", Sparkles.enabled) {
             Sparkles.setEnabled(context, it)
         }

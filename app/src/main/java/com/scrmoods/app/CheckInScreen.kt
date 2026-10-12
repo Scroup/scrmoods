@@ -128,10 +128,15 @@ private val Gutter = 14.dp
 
 /** One rounded "page" holding a section of the journal. */
 @Composable
-private fun JournalCard(bottomPadding: androidx.compose.ui.unit.Dp = 16.dp, content: @Composable ColumnScope.() -> Unit) {
+private fun JournalCard(
+    bottomPadding: androidx.compose.ui.unit.Dp = 16.dp,
+    order: Int = 0, // when it rises in during the opening animation
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val shape = RoundedCornerShape(20.dp)
     Column(
         Modifier
+            .reveal(order)
             .padding(start = 10.dp, end = 10.dp, top = 12.dp)
             .fillMaxWidth()
             .clip(shape)
@@ -155,13 +160,14 @@ fun CheckInScreen(
     val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
-        JournalDateHeader(date, onDateChange)
-        if (Themes.showQuote) QuoteOfTheDay(Quotes.forDate(date))
+        Box(Modifier.reveal(0)) { JournalDateHeader(date, onDateChange) }
+        if (Themes.showQuote) Box(Modifier.reveal(1)) { QuoteOfTheDay(Quotes.forDate(date)) }
+        var order = 2 // cards rise in one after another when the app opens
 
         for (section in data.sections) {
             if (section.hidden) continue
             if (section.id == Sections.BIPOLAR) {
-                JournalCard {
+                JournalCard(order = order++) {
                     SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
                     MoodScaleCard(
                         value = entry.values[MoodPoints.SCALE],
@@ -180,7 +186,7 @@ fun CheckInScreen(
             val points = data.points.filter { it.sectionId == section.id && !it.archived }
             val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
             if (points.isEmpty() && !alwaysShown) continue
-            JournalCard {
+            JournalCard(order = order++) {
                 SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
                 for (p in points) {
                     PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
@@ -197,7 +203,7 @@ fun CheckInScreen(
             }
         }
 
-        JournalCard(bottomPadding = 4.dp) {
+        JournalCard(bottomPadding = 4.dp, order = order) {
             SectionHeader("Today's note", horizontal = Gutter, top = 16.dp)
             RuledNote(key, entry.note, onFinish = if (GoodNight.enabled) ({ GoodNight.celebrate(context, key) }) else null)
         }
@@ -359,6 +365,13 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
 private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = null) {
     val focus = LocalFocusManager.current
     var text by remember(dateKey) { mutableStateOf(saved) }
+    // The note as this field last saved it. If the stored note differs, it was changed from
+    // outside (a quick note from the widget), so show the new version.
+    var known by remember(dateKey) { mutableStateOf(saved) }
+    if (saved != known) {
+        text = saved
+        known = saved
+    }
     // Save anything still pending when you turn to another day.
     val latest by rememberUpdatedState(text)
     DisposableEffect(dateKey) {
@@ -367,6 +380,7 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
     LaunchedEffect(dateKey, text) {
         if (text.trim() != saved) {
             delay(600)
+            known = text.trim()
             Repo.setNote(dateKey, text)
         }
     }
@@ -401,6 +415,7 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
         },
     )
     if (onFinish != null) FinishDayButton(done = GoodNight.finished == dateKey) {
+        known = text.trim()
         Repo.setNote(dateKey, text)   // save right away, don't wait for the pause in typing
         focus.clearFocus()            // closes the keyboard
         onFinish()

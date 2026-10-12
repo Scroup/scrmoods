@@ -111,6 +111,7 @@ object Themes {
     fun select(context: Context, p: Palette) {
         current = p
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("theme", p.id).apply()
+        QuickNoteWidget.refresh(context) // the home-screen widget follows the theme
     }
 }
 

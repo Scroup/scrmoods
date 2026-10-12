@@ -94,6 +94,12 @@ object Repo {
 
     fun setNote(date: String, note: String) = updateEntry(date) { it.copy(note = note.trim()) }
 
+    /** A quick note from the widget: a new line at the end of the day's note, e.g. "20:31 — feeling calmer". */
+    fun addQuickNote(date: String, time: String, text: String) = updateEntry(date) {
+        val line = "$time — ${text.trim()}"
+        it.copy(note = if (it.note.isBlank()) line else it.note.trimEnd() + "\n" + line)
+    }
+
     fun addTimedNote(date: String, time: String, text: String) = updateEntry(date) {
         it.copy(timedNotes = it.timedNotes + TimedNote(time, text.trim()))
     }

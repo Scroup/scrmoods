@@ -7,4 +7,13 @@
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowBackground">@color/paper</item>
     </style>
+
+    <!-- The quick note window opened from the widget: see-through, drawn edge to edge by the app. -->
+    <style name="Theme.Scrmoods.QuickNote" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

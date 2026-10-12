@@ -36,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
         GoodNight.init(applicationContext)
         Haptics.init(applicationContext)
         Sparkles.init(applicationContext)
+        Intro.init(applicationContext, freshStart = savedInstanceState == null)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
         setContent {
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
                 }
                 Box(Modifier.fillMaxSize()) {
                     App()
+                    WelcomeOverlay()
                     SparkleLayer()
                     GoodNightOverlay()
                 }
@@ -121,6 +124,14 @@ fun App() {
             notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else if (!Reminders.canNotify(context)) {
             Toast.makeText(context, "Notifications are off for scrmoods. Turn them on in Settings to get reminders.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // the opening animation is over once the last card has risen
+    LaunchedEffect(Unit) {
+        if (Intro.playing) {
+            kotlinx.coroutines.delay(Intro.RISE_START + 20 * Intro.STAGGER + 800)
+            Intro.playing = false
         }
     }
 
