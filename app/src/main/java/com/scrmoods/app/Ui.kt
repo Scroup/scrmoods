@@ -136,7 +136,7 @@ fun Segmented(
     var settled by remember(options, maxFont) { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (row in options.withIndex().chunked(5)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for ((index, label) in row) {
                     val isSel = selected == index
                     val shape = RoundedCornerShape(50)
@@ -148,7 +148,7 @@ fun Segmented(
                             .background(if (isSel) Accent else Page)
                             .border(1.dp, if (isSel) Accent else Rule, shape)
                             .clickable { onSelect(if (isSel) null else index) }
-                            .padding(horizontal = 2.dp, vertical = 4.dp),
+                            .padding(horizontal = 5.dp, vertical = 4.dp), // keeps text clear of the rounded edges
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(

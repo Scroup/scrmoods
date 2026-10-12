@@ -148,8 +148,9 @@ fun CheckInScreen(
 @Composable
 fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (String?) -> Unit) {
     when (p.type) {
-        PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            Question(p.label, Modifier.padding(top = 20.dp, bottom = 10.dp))
+        // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
+        PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 18.dp, bottom = 8.dp))
             Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) })
         }
 
