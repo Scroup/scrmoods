@@ -212,7 +212,7 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
         // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
         PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
             Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 18.dp, bottom = 8.dp))
-            Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) })
+            Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) }, playful = true)
         }
 
         PointType.YESNO -> YesNoRow(p.label, value, onChange, Reminders.describe(p.reminders))
@@ -270,7 +270,7 @@ private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit,
                 )
                 if (note.isNotEmpty()) ReminderNote(note)
             }
-            Segmented(listOf("No", "Yes"), selected, { onChange(it?.toString()) }, Modifier.width(116.dp), minHeight = 40)
+            Segmented(listOf("No", "Yes"), selected, { onChange(it?.toString()) }, Modifier.width(116.dp), minHeight = 40, playful = true)
         }
     } else {
         Column(Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 14.dp)) {
@@ -278,7 +278,7 @@ private fun YesNoRow(label: String, value: String?, onChange: (String?) -> Unit,
             if (note.isNotEmpty()) ReminderNote(note)
             Segmented(
                 listOf("No", "Yes"), selected, { onChange(it?.toString()) },
-                Modifier.align(Alignment.End).padding(top = 8.dp).width(116.dp), minHeight = 40,
+                Modifier.align(Alignment.End).padding(top = 8.dp).width(116.dp), minHeight = 40, playful = true,
             )
         }
     }

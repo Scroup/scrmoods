@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
         Themes.init(applicationContext)
         GoodNight.init(applicationContext)
         Haptics.init(applicationContext)
+        Sparkles.init(applicationContext)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
         setContent {
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
                 }
                 Box(Modifier.fillMaxSize()) {
                     App()
+                    SparkleLayer()
                     GoodNightOverlay()
                 }
             }

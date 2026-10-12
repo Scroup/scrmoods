@@ -204,6 +204,7 @@ fun Segmented(
     maxFont: Float = 14f,
     minFont: Float = 10.5f,
     idleColor: Color = Paper,
+    playful: Boolean = false, // answer pills in the journal squish and pop stars when tapped
 ) {
     var fontSize by remember(options, maxFont) { mutableStateOf(maxFont) }
     var settled by remember(options, maxFont) { mutableStateOf(false) }
@@ -213,14 +214,20 @@ fun Segmented(
                 for ((index, label) in row) {
                     val isSel = selected == index
                     val shape = RoundedCornerShape(50)
+                    val pop = rememberPop()
                     Box(
                         Modifier
                             .weight(1f)
                             .heightIn(min = minHeight.dp)
+                            .then(if (playful) pop.modifier else Modifier)
                             .clip(shape)
                             .background(if (isSel) Accent else idleColor)
                             .border(1.dp, if (isSel) Accent else Rule, shape)
-                            .clickable { Haptics.tap(); onSelect(if (isSel) null else index) }
+                            .clickable {
+                                Haptics.tap()
+                                if (playful) pop.fire(stars = !isSel, color = Accent)
+                                onSelect(if (isSel) null else index)
+                            }
                             .padding(horizontal = 5.dp, vertical = 4.dp), // keeps text clear of the rounded edges
                         contentAlignment = Alignment.Center,
                     ) {

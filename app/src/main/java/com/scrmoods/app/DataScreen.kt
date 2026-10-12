@@ -127,6 +127,9 @@ fun DataScreen(onManage: () -> Unit) {
         SettingSwitch("Vibrate on tap", "A soft click of vibration when you tap buttons and answers.", Haptics.enabled) {
             Haptics.setEnabled(context, it)
         }
+        SettingSwitch("Stars when answering", "Answer buttons squish when tapped and pop out little stars.", Sparkles.enabled) {
+            Sparkles.setEnabled(context, it)
+        }
         SettingSwitch(
             "Good night celebration",
             "A \"Finish the day\" button under today's note: confetti, a good-night wish and a short lullaby.",

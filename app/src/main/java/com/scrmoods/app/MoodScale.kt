@@ -134,10 +134,12 @@ fun MoodScaleCard(
                     else -> (lo < 5 && n in lo..5) || (lo > 5 && n in 5..lo)
                 }
                 val c = MoodScale.zoneColor(n)
+                val pop = rememberPop()
                 Box(
                     Modifier
                         .weight(1f)
                         .aspectRatio(1f)
+                        .then(pop.modifier)
                         .clip(CircleShape)
                         .background(
                             when {
@@ -147,7 +149,7 @@ fun MoodScaleCard(
                             },
                         )
                         .border(1.dp, if (sel) c else c.copy(alpha = 0.45f), CircleShape)
-                        .clickable { Haptics.tap(); tap(n) },
+                        .clickable { Haptics.tap(); pop.fire(stars = !sel, color = c); tap(n) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -167,6 +169,7 @@ fun MoodScaleCard(
 
         // Mixed features: depressive and high symptoms at the same time
         Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            val mixedPop = rememberPop()
             Text(
                 if (isMixed) "✓ Mixed features" else "Mixed features",
                 fontSize = 14.sp,
@@ -175,11 +178,13 @@ fun MoodScaleCard(
                 softWrap = false,
                 color = if (isMixed) OnAccent else Accent,
                 modifier = Modifier
+                    .then(mixedPop.modifier)
                     .clip(RoundedCornerShape(50))
                     .background(if (isMixed) Accent else Paper)
                     .border(1.dp, if (isMixed) Accent else Rule, RoundedCornerShape(50))
                     .clickable {
                         Haptics.tap()
+                        mixedPop.fire(stars = !isMixed, color = Accent)
                         if (isMixed) { onMixedChange(null); onChange(a, null) } else onMixedChange("1")
                     }
                     .padding(horizontal = 14.dp, vertical = 7.dp),
