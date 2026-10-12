@@ -1,6 +1,7 @@
 package com.scrmoods.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,25 +11,28 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,8 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -47,35 +57,49 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val headerFmt = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-private val headerFmtYear = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault())
+private val weekdayFmt = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault())
+private val longDateFmt = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault())
 
+/** The day as a journal page heading: a large weekday, the date in italic, and arrows to turn the page. */
 @Composable
-fun DateBar(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
+fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     val today = LocalDate.now()
-    Column(Modifier.background(Color.White)) {
-        Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { onDateChange(date.minusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day", Modifier.size(36.dp), tint = TextDark)
-            }
+    Row(
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Column(Modifier.weight(1f)) {
             Text(
-                text = date.format(if (date.year == today.year) headerFmt else headerFmtYear),
-                color = Teal,
-                fontSize = 21.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).clickable { onDateChange(today) },
+                date.format(weekdayFmt).replaceFirstChar { it.uppercase() },
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = (-0.3).sp,
+                color = Ink,
+                lineHeight = 42.sp,
             )
-            IconButton(onClick = { onDateChange(date.plusDays(1)) }, enabled = date < today) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day", Modifier.size(36.dp),
-                    tint = if (date < today) TextDark else Color(0xFFCCCCCC),
+            Text(date.format(longDateFmt), fontSize = 17.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+            if (date != today) {
+                Text(
+                    "Back to today",
+                    fontSize = 15.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = Accent,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .clip(RoundedCornerShape(50))
+                        .clickable { onDateChange(today) }
+                        .padding(vertical = 4.dp),
                 )
             }
         }
-        HorizontalDivider(color = Color(0xFFE0E0E0))
+        Row(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RoundButton(onClick = { onDateChange(date.minusDays(1)) }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day", tint = Ink)
+            }
+            RoundButton(enabled = date < today, onClick = { onDateChange(date.plusDays(1)) }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day", tint = if (date < today) Ink else Rule)
+            }
+        }
     }
 }
 
@@ -90,71 +114,56 @@ fun CheckInScreen(
     val key = date.toString()
     val entry = data.entries[key] ?: DayEntry(key)
 
-    Column(Modifier.fillMaxSize()) {
-        DateBar(date, onDateChange)
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            var shaded = false
-            for (section in data.sections) {
-                val points = data.points.filter { it.sectionId == section.id && !it.archived }
-                val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
-                if (points.isEmpty() && !alwaysShown) continue
-                val bg = if (shaded) SectionGray else Color.White
-                shaded = !shaded
-                Column(Modifier.fillMaxWidth().background(bg).padding(bottom = 12.dp)) {
-                    SectionHeader(section.title)
-                    for (p in points) {
-                        PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
-                    }
-                    when (section.id) {
-                        Sections.CUSTOM -> LinkButton(
-                            "Add custom tracking point",
-                            Modifier.align(Alignment.CenterHorizontally),
-                        ) { onAddPoint(Sections.CUSTOM) }
-                        Sections.MEDS -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            LinkButton("Add medication") { onAddPoint(Sections.MEDS) }
-                            LinkButton("Edit medications") { onManage() }
-                        }
-                    }
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
+        JournalDateHeader(date, onDateChange)
+
+        for (section in data.sections) {
+            val points = data.points.filter { it.sectionId == section.id && !it.archived }
+            val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
+            if (points.isEmpty() && !alwaysShown) continue
+            SectionHeader(section.title)
+            for (p in points) {
+                PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
+            }
+            when (section.id) {
+                Sections.CUSTOM -> LinkButton("+ Add custom tracking point", Modifier.padding(start = 8.dp, top = 6.dp)) {
+                    onAddPoint(Sections.CUSTOM)
+                }
+                Sections.MEDS -> Row(Modifier.padding(start = 8.dp, top = 6.dp)) {
+                    LinkButton("+ Add medication") { onAddPoint(Sections.MEDS) }
+                    LinkButton("Edit medications") { onManage() }
                 }
             }
-
-            NotesBlock(key, entry, if (shaded) SectionGray else Color.White, if (shaded) Color.White else SectionGray)
-            Spacer(Modifier.height(24.dp))
         }
+
+        SectionHeader("Today's note")
+        RuledNote(key, entry.note)
+
+        TimedNotes(key, entry)
+        Spacer(Modifier.height(32.dp))
     }
 }
 
 @Composable
 fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (String?) -> Unit) {
-    val labelMod = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp)
     when (p.type) {
-        PointType.SCALE -> Column(Modifier.fillMaxWidth()) {
-            Text(p.label, fontSize = 18.sp, color = TextGray, modifier = labelMod)
-            Segmented(
-                p.options,
-                value?.toIntOrNull(),
-                { onChange(it?.toString()) },
-                Modifier.padding(horizontal = 12.dp),
-            )
+        PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            Question(p.label, Modifier.padding(top = 20.dp, bottom = 10.dp))
+            Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) })
         }
 
         PointType.YESNO -> Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 6.dp),
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(p.label, fontSize = 18.sp, color = TextGray, modifier = Modifier.weight(1f).padding(end = 12.dp))
-            Segmented(
-                listOf("No", "Yes"),
-                value?.toIntOrNull(),
-                { onChange(it?.toString()) },
-                Modifier.width(150.dp),
-            )
+            Question(p.label, Modifier.weight(1f).padding(end = 14.dp))
+            Segmented(listOf("No", "Yes"), value?.toIntOrNull(), { onChange(it?.toString()) }, Modifier.width(136.dp))
         }
 
         PointType.NUMBER -> NumberInput(p, value, dateKey, onChange)
 
-        PointType.TEXT -> Column(Modifier.fillMaxWidth()) {
-            Text(p.label, fontSize = 18.sp, color = TextGray, modifier = labelMod)
+        PointType.TEXT -> Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            Question(p.label, Modifier.padding(top = 20.dp, bottom = 10.dp))
             // Typing is saved shortly after you stop, not on every key press.
             var text by remember(dateKey, p.id) { mutableStateOf(value ?: "") }
             LaunchedEffect(text) {
@@ -166,10 +175,17 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = journalFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
+}
+
+@Composable
+private fun Question(label: String, modifier: Modifier) {
+    Text(label, fontSize = 17.sp, lineHeight = 23.sp, color = Ink, modifier = modifier)
 }
 
 @Composable
@@ -184,17 +200,24 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
     var dragging by remember(dateKey, p.id) { mutableStateOf(false) }
     var pos by remember(dateKey, p.id) { mutableFloatStateOf(stored ?: p.min) }
     val sliderValue = if (dragging) pos else (stored ?: p.min)
-    val shown = if (dragging || stored != null) formatNumber(sliderValue) else "–"
-    val unit = if (p.unit.isNotBlank()) " (${p.unit})" else ""
+    val hasValue = dragging || stored != null
 
-    Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("${p.label}$unit: $shown", fontSize = 18.sp, color = TextGray, modifier = Modifier.weight(1f))
-            if (stored != null) TextButton(onClick = { onChange(null) }) { Text("Clear", color = TextGray) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 20.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(p.label, fontSize = 17.sp, lineHeight = 23.sp, color = Ink, modifier = Modifier.weight(1f).padding(bottom = 3.dp))
+            if (hasValue) {
+                Text(formatNumber(sliderValue), fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Accent)
+                if (p.unit.isNotBlank()) Text(
+                    " " + p.unit, fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                    modifier = Modifier.padding(bottom = 3.dp),
+                )
+            } else {
+                Text("not set", fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(bottom = 3.dp))
+            }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { onChange(formatNumber(snap((stored ?: p.min) - step))) }) {
-                Text("—", fontSize = 26.sp, color = TextDark)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            RoundButton(onClick = { onChange(formatNumber(snap((stored ?: p.min) - step))) }) {
+                Text("−", fontSize = 22.sp, color = Ink)
             }
             val steps = (((p.max - p.min) / step).roundToInt() - 1).coerceAtLeast(0)
             Slider(
@@ -204,65 +227,107 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
                 valueRange = p.min..p.max,
                 steps = if (steps <= 200) steps else 0,
                 colors = SliderDefaults.colors(
-                    thumbColor = Teal,
-                    activeTrackColor = Teal,
-                    inactiveTrackColor = Color(0xFFDDDDDD),
+                    thumbColor = if (stored != null || dragging) Accent else InkFaint,
+                    activeTrackColor = if (stored != null || dragging) Accent else Rule,
+                    inactiveTrackColor = Rule,
                     activeTickColor = Color.Transparent,
                     inactiveTickColor = Color.Transparent,
                 ),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
             )
-            TextButton(onClick = {
-                onChange(formatNumber(snap(if (stored == null) p.min + step else stored + step)))
-            }) {
-                Text("+", fontSize = 30.sp, color = TextDark)
+            RoundButton(onClick = { onChange(formatNumber(snap(if (stored == null) p.min + step else stored + step))) }) {
+                Text("+", fontSize = 22.sp, color = Ink)
             }
+        }
+        if (stored != null) {
+            Text(
+                "Clear",
+                fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .clip(RoundedCornerShape(50))
+                    .clickable { onChange(null) }
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }
 
+/** The day's note, written straight onto ruled notebook lines. Saved shortly after you stop typing. */
 @Composable
-private fun NotesBlock(dateKey: String, entry: DayEntry, bg1: Color, bg2: Color) {
-    var editNote by remember { mutableStateOf(false) }
+private fun RuledNote(dateKey: String, saved: String) {
+    var text by remember(dateKey) { mutableStateOf(saved) }
+    // Save anything still pending when you turn to another day.
+    val latest by rememberUpdatedState(text)
+    DisposableEffect(dateKey) {
+        onDispose { if (latest.trim() != (Repo.data.entries[dateKey]?.note ?: "")) Repo.setNote(dateKey, latest) }
+    }
+    LaunchedEffect(dateKey, text) {
+        if (text.trim() != saved) {
+            delay(600)
+            Repo.setNote(dateKey, text)
+        }
+    }
+    val lineHeight = 30.sp
+    val padTop = 10.dp
+    BasicTextField(
+        value = text,
+        onValueChange = { text = it },
+        textStyle = TextStyle(fontFamily = Lora, fontSize = 17.sp, lineHeight = lineHeight, color = Ink),
+        cursorBrush = SolidColor(Accent),
+        modifier = Modifier
+            .padding(start = 20.dp, end = 20.dp, top = 14.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Page)
+            .border(1.dp, Rule, RoundedCornerShape(16.dp))
+            .drawBehind {
+                val lh = lineHeight.toPx()
+                var y = padTop.toPx() + lh - lh * 0.16f
+                while (y < size.height - 6.dp.toPx()) {
+                    drawLine(Rule, Offset(16.dp.toPx(), y), Offset(size.width - 16.dp.toPx(), y), strokeWidth = 1.dp.toPx())
+                    y += lh
+                }
+            }
+            .heightIn(min = 160.dp)
+            .padding(start = 18.dp, end = 18.dp, top = padTop, bottom = 12.dp),
+        decorationBox = { inner ->
+            Box {
+                if (text.isEmpty()) Text(
+                    "Write about your day…",
+                    style = TextStyle(fontFamily = Lora, fontSize = 17.sp, lineHeight = lineHeight, fontStyle = FontStyle.Italic, color = InkFaint),
+                )
+                inner()
+            }
+        },
+    )
+}
+
+@Composable
+private fun TimedNotes(dateKey: String, entry: DayEntry) {
     var addTimed by remember { mutableStateOf(false) }
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
 
-    Column(Modifier.fillMaxWidth().background(bg1).padding(bottom = 16.dp)) {
-        Box(Modifier.fillMaxWidth()) {
-            SectionHeader("Today's Note:")
-            TextButton(onClick = { editNote = true }, modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 8.dp)) {
-                Text("Edit", color = TextGray)
-            }
-        }
-        Text(
-            entry.note.ifBlank { "Tap Edit to write a note for this day." },
-            color = if (entry.note.isBlank()) Color(0xFF999999) else TextDark,
-            fontSize = 17.sp,
-            modifier = Modifier.fillMaxWidth().clickable { editNote = true }.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-    }
-    Column(Modifier.fillMaxWidth().background(bg2).padding(bottom = 12.dp)) {
-        SectionHeader("Notes:")
+    SectionHeader("Through the day")
+    Column(Modifier.padding(top = 8.dp)) {
         entry.timedNotes.forEachIndexed { i, n ->
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.Top) {
-                Text(n.time.substringAfter(' '), color = Teal, fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp, end = 10.dp))
-                Text(n.text, color = TextDark, fontSize = 17.sp, modifier = Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp), verticalAlignment = Alignment.Top) {
+                Text(
+                    n.time.substringAfter(' '),
+                    color = Accent, fontSize = 15.sp, fontStyle = FontStyle.Italic,
+                    modifier = Modifier.width(56.dp).padding(top = 2.dp),
+                )
+                Text(n.text, color = Ink, fontSize = 17.sp, lineHeight = 24.sp, modifier = Modifier.weight(1f))
                 IconButton(onClick = { deleteIndex = i }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, "Delete note", tint = Color(0xFFAAAAAA), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Filled.Close, "Delete note", tint = InkFaint, modifier = Modifier.size(16.dp))
                 }
             }
         }
-        LinkButton("Add timestamped note", Modifier.align(Alignment.CenterHorizontally)) { addTimed = true }
+        LinkButton("+ Add a timestamped note", Modifier.padding(start = 8.dp, top = 4.dp)) { addTimed = true }
     }
 
-    if (editNote) TextInputDialog(
-        title = "Today's Note",
-        initial = entry.note,
-        onDismiss = { editNote = false },
-        onSave = { Repo.setNote(dateKey, it); editNote = false },
-    )
     if (addTimed) TextInputDialog(
-        title = "Timestamped note",
+        title = "Note for right now",
         initial = "",
         confirmText = "Add",
         onDismiss = { addTimed = false },
@@ -276,7 +341,7 @@ private fun NotesBlock(dateKey: String, entry: DayEntry, bg1: Color, bg2: Color)
     )
     deleteIndex?.let { idx ->
         ConfirmDialog(
-            title = "Delete note?",
+            title = "Delete this note?",
             message = entry.timedNotes.getOrNull(idx)?.text ?: "",
             confirmText = "Delete",
             onDismiss = { deleteIndex = null },

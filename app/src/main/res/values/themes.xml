@@ -1,7 +1,10 @@
 <resources>
     <style name="Theme.Scrmoods" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@color/purple</item>
-        <item name="android:navigationBarColor">@color/purple</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <!-- Paper-coloured system bars with dark icons, so the app reads as one page. -->
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@color/paper</item>
     </style>
 </resources>

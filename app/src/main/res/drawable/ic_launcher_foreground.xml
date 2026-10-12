@@ -3,12 +3,19 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- white rounded house -->
+    <!-- a closed journal with a ribbon bookmark -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M54,30 L78,50 L78,76 Q78,78 76,78 L32,78 Q30,78 30,76 L30,50 Z" />
-    <!-- three bars -->
-    <path android:fillColor="#FF5FA7C3" android:pathData="M40,62 h6 v10 h-6 z" />
-    <path android:fillColor="#FF38166B" android:pathData="M51,54 h6 v18 h-6 z" />
-    <path android:fillColor="#FF5FA7C3" android:pathData="M62,58 h6 v14 h-6 z" />
+        android:fillColor="#FFFDF9F7"
+        android:pathData="M36,30 L72,30 Q76,30 76,34 L76,74 Q76,78 72,78 L36,78 Q32,78 32,74 L32,34 Q32,30 36,30 Z" />
+    <path
+        android:fillColor="#FFEADCD5"
+        android:pathData="M37,30 L41,30 L41,78 L37,78 Z" />
+    <path
+        android:fillColor="#FFD9B26A"
+        android:pathData="M62,30 L68,30 L68,48 L65,45 L62,48 Z" />
+    <path
+        android:strokeColor="#FFA0594F"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M48,54 L66,54 M48,60 L66,60 M48,66 L60,66" />
 </vector>

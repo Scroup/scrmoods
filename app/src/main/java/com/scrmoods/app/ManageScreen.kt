@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -51,34 +55,33 @@ fun ManageScreen(
     var confirmDelete by remember { mutableStateOf<TrackingPoint?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().background(Color.White)) {
+    Column(Modifier.fillMaxSize().background(Paper)) {
         Row(
-            Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 4.dp, vertical = 4.dp),
+            Modifier.fillMaxWidth().background(Paper).padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextDark) }
-            Text("Tracking points", fontSize = 21.sp, color = TextDark)
+            Text("Tracking points", fontSize = 26.sp, fontWeight = FontWeight.Medium, color = Ink)
         }
-        HorizontalDivider(color = Color(0xFFE0E0E0))
 
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Text(
                 "Add your own questions, edit or reorder them, or remove the ones you don't need. " +
                     "Removing a point only hides it from the check-in, so its past answers stay in your data.",
                 color = TextGray, fontSize = 15.sp,
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp), fontStyle = FontStyle.Italic, lineHeight = 21.sp,
             )
             for (section in data.sections) {
                 val points = data.points.filter { it.sectionId == section.id && !it.archived }
                 SectionHeader(section.title)
                 points.forEachIndexed { i, p ->
                     Row(
-                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                        Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f).clickable { onEdit(p) }) {
-                            Text(p.label, fontSize = 16.sp, color = TextDark)
-                            Text(typeSummary(p), fontSize = 13.sp, color = Color(0xFF888888))
+                            Text(p.label, fontSize = 16.sp, lineHeight = 21.sp, color = Ink)
+                            Text(typeSummary(p), fontSize = 13.sp, color = InkSoft)
                         }
                         SmallIcon(Icons.Filled.KeyboardArrowUp, "Move up", enabled = i > 0) { Repo.move(p.id, -1) }
                         SmallIcon(Icons.Filled.KeyboardArrowDown, "Move down", enabled = i < points.size - 1) { Repo.move(p.id, 1) }
@@ -87,11 +90,11 @@ fun ManageScreen(
                     }
                 }
                 if (points.isEmpty()) {
-                    Text("Nothing here yet.", color = Color(0xFF999999), fontSize = 15.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                    Text("Nothing here yet.", color = InkFaint, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp), fontStyle = FontStyle.Italic)
                 }
                 LinkButton(
-                    if (section.id == Sections.MEDS) "Add medication" else "Add tracking point",
-                    Modifier.padding(start = 4.dp),
+                    if (section.id == Sections.MEDS) "+ Add medication" else "+ Add tracking point",
+                    Modifier.padding(start = 8.dp),
                 ) { onAdd(section.id) }
             }
 
@@ -100,26 +103,26 @@ fun ManageScreen(
                 SectionHeader("Removed tracking points")
                 Text(
                     "Hidden from the check-in. Restore brings a point back; Delete erases it and all its past answers.",
-                    color = TextGray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    color = InkSoft, fontSize = 14.sp, fontStyle = FontStyle.Italic, modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                 )
                 for (p in removed) {
                     Row(
-                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                        Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(p.label, fontSize = 16.sp, color = TextGray)
-                            Text(sectionTitle(p.sectionId), fontSize = 13.sp, color = Color(0xFF999999))
+                            Text(sectionTitle(p.sectionId), fontSize = 13.sp, color = InkFaint)
                         }
                         SmallIcon(Icons.Filled.Refresh, "Restore") { Repo.setArchived(p.id, false) }
-                        SmallIcon(Icons.Filled.Delete, "Delete forever", tint = Color(0xFFC0392B)) { confirmDelete = p }
+                        SmallIcon(Icons.Filled.Delete, "Delete forever", tint = Danger) { confirmDelete = p }
                     }
                 }
             }
 
-            HorizontalDivider(Modifier.padding(top = 16.dp), color = Color(0xFFE6E6E6))
+            HorizontalDivider(Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp), color = Rule)
             TextButton(onClick = { confirmReset = true }, modifier = Modifier.padding(8.dp)) {
-                Text("Restore all built-in questions", color = TextGray)
+                Text("Restore all built-in questions", color = InkSoft, fontStyle = FontStyle.Italic)
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -161,7 +164,7 @@ private fun SmallIcon(
     onClick: () -> Unit,
 ) {
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(40.dp)) {
-        Icon(icon, desc, tint = if (enabled) tint else Color(0xFFDDDDDD), modifier = Modifier.size(22.dp))
+        Icon(icon, desc, tint = if (enabled) tint else Rule, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -231,6 +234,7 @@ fun PointEditorDialog(
                     onValueChange = { label = it; error = null },
                     label = { Text(if (isMed) "Name and dose" else "Question") },
                     placeholder = { Text(if (isMed) "e.g. Vitamin D, 2000 IU (AM)" else "e.g. Did you drink enough water?") },
+                    colors = journalFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -258,11 +262,12 @@ fun PointEditorDialog(
                         onValueChange = { options = it; error = null },
                         label = { Text("Options, one per line (lowest first)") },
                         minLines = 3,
+                        colors = journalFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (existing != null) Text(
                         "Answers are saved by position, so keep the same number and order of options.",
-                        fontSize = 12.sp, color = Color(0xFF888888),
+                        fontSize = 12.sp, color = InkSoft,
                     )
                 }
                 if (type == PointType.NUMBER) {
@@ -279,14 +284,17 @@ fun PointEditorDialog(
                         onValueChange = { unit = it },
                         label = { Text("Unit (optional, e.g. hrs, cups)") },
                         singleLine = true,
+                        colors = journalFieldColors(),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
-                error?.let { Text(it, color = Color(0xFFC0392B), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+                error?.let { Text(it, color = Danger, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
             }
         },
-        confirmButton = { TextButton(onClick = { build()?.let(onSave) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Page,
+        shape = RoundedCornerShape(22.dp),
+        confirmButton = { TextButton(onClick = { build()?.let(onSave) }) { Text("Save", color = Accent, fontWeight = FontWeight.Medium) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = InkSoft) } },
     )
 }
 
@@ -296,7 +304,7 @@ private fun RadioRow(text: String, selected: Boolean, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = Accent, unselectedColor = InkFaint))
         Text(text, fontSize = 15.sp, color = TextDark)
     }
 }
@@ -309,6 +317,7 @@ private fun NumField(label: String, value: String, modifier: Modifier, onChange:
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        colors = journalFieldColors(),
         modifier = modifier,
     )
 }

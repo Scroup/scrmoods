@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,7 +56,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class Tab(val label: String) { CHECKIN("Check-in"), CALENDAR("Calendar"), GRAPH("Graph"), DATA("Data") }
+enum class Tab(val label: String) { CHECKIN("Journal"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Data") }
 
 private fun Tab.icon(): ImageVector = when (this) {
     Tab.CHECKIN -> Icons.Filled.CheckCircle
@@ -79,25 +81,28 @@ fun App() {
     Scaffold(
         topBar = { TopBar(onSettings = { manage = true }) },
         bottomBar = {
-            if (!manage) NavigationBar(containerColor = Purple) {
-                for (t in Tab.entries) {
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = { Icon(t.icon(), t.label) },
-                        label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            unselectedIconColor = Color.White.copy(alpha = 0.75f),
-                            unselectedTextColor = Color.White.copy(alpha = 0.75f),
-                            indicatorColor = Teal.copy(alpha = 0.55f),
-                        ),
-                    )
+            if (!manage) Column {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
+                NavigationBar(containerColor = Paper, tonalElevation = 0.dp) {
+                    for (t in Tab.entries) {
+                        NavigationBarItem(
+                            selected = tab == t,
+                            onClick = { tab = t },
+                            icon = { Icon(t.icon(), t.label) },
+                            label = { Text(t.label, fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Accent,
+                                selectedTextColor = Accent,
+                                unselectedIconColor = InkSoft,
+                                unselectedTextColor = InkSoft,
+                                indicatorColor = AccentWash,
+                            ),
+                        )
+                    }
                 }
             }
         },
-        containerColor = Color.White,
+        containerColor = Paper,
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             if (manage) {
@@ -135,6 +140,7 @@ fun App() {
     Repo.loadError?.let { msg ->
         AlertDialog(
             onDismissRequest = { Repo.loadError = null },
+            containerColor = Page,
             title = { Text("Problem loading data") },
             text = { Text(msg) },
             confirmButton = { TextButton(onClick = { Repo.loadError = null }) { Text("OK") } },
@@ -145,23 +151,16 @@ fun App() {
 @Composable
 private fun TopBar(onSettings: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(Purple).height(64.dp).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().background(Paper).height(56.dp).padding(start = 20.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(Color.White),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(BarChartIcon, null, tint = Purple, modifier = Modifier.size(26.dp))
-        }
-        Box(Modifier.width(16.dp))
         Text(
             "scrmoods",
-            color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Medium,
+            color = Accent, fontSize = 21.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onSettings) {
-            Icon(Icons.Filled.Settings, "Tracking points", tint = Color.White)
+            Icon(Icons.Filled.Settings, "Tracking points", tint = InkSoft)
         }
     }
 }

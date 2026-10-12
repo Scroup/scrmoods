@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,9 +46,10 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-val BadColor = Color(0xFFD9534F)
-val MidColor = Color(0xFFF0AD4E)
-val GoodColor = Color(0xFF5CB85C)
+// Muted mood inks: dusty rose → honey → olive sage.
+val BadColor = Color(0xFFC98378)
+val MidColor = Color(0xFFD9B26A)
+val GoodColor = Color(0xFF93A77F)
 
 /** Red → orange → green for a 0..1 fraction. */
 fun moodColor(f: Float): Color =
@@ -61,24 +63,28 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
     val today = LocalDate.now()
     val monthFmt = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
+        // Month as a page heading: large month name, year in italic, arrows to turn the page.
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.Bottom,
         ) {
-            IconButton(onClick = { month = month.minusMonths(1) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month", Modifier.size(36.dp), tint = TextDark)
+            Column(Modifier.weight(1f).clickable { month = YearMonth.from(today) }) {
+                Text(
+                    month.format(DateTimeFormatter.ofPattern("LLLL", Locale.getDefault())).replaceFirstChar { it.uppercase() },
+                    fontSize = 36.sp, fontWeight = FontWeight.Medium, color = Ink, lineHeight = 42.sp,
+                )
+                Text(month.year.toString(), fontSize = 17.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
-            Text(
-                month.format(monthFmt).replaceFirstChar { it.uppercase() },
-                color = Teal, fontSize = 21.sp, textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).clickable { month = YearMonth.from(today) },
-            )
-            IconButton(onClick = { month = month.plusMonths(1) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month", Modifier.size(36.dp), tint = TextDark)
+            Row(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RoundButton(onClick = { month = month.minusMonths(1) }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month", tint = Ink)
+                }
+                RoundButton(onClick = { month = month.plusMonths(1) }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month", tint = Ink)
+                }
             }
         }
-        HorizontalDivider(color = Color(0xFFE0E0E0))
 
         // Weekday names, Monday first.
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
@@ -87,7 +93,7 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
                 Text(
                     dow.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                     modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
-                    color = TextGray, fontSize = 13.sp,
+                    color = InkSoft, fontSize = 13.sp, fontStyle = FontStyle.Italic,
                 )
             }
         }
@@ -128,13 +134,13 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
                     Box(Modifier.size(12.dp).clip(CircleShape).background(moodColor(f)))
                     Text(o, fontSize = 14.sp, color = TextDark)
                 }
-                Box(Modifier.size(12.dp).clip(CircleShape).background(Teal))
+                Box(Modifier.size(12.dp).clip(CircleShape).background(InkSoft))
                 Text("Other entries", fontSize = 14.sp, color = TextDark)
             }
         }
         Text(
             "Tap a day to open its check-in.",
-            color = Color(0xFF999999), fontSize = 14.sp,
+            color = InkFaint, fontSize = 14.sp, fontStyle = FontStyle.Italic,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Spacer(Modifier.height(24.dp))
@@ -162,17 +168,17 @@ private fun DayCell(
             Text(
                 date.dayOfMonth.toString(),
                 fontSize = 16.sp,
-                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
                 color = when {
                     isSelected -> Color.White
-                    isFuture -> Color(0xFFBBBBBB)
+                    isFuture -> InkFaint
                     else -> TextDark
                 },
             )
             val dotColor: Color? = entry?.let { e ->
                 val v = outlook?.let { e.values[it.id]?.toIntOrNull() }
                 if (v != null && outlook != null && outlook.options.size > 1) moodColor(v.toFloat() / (outlook.options.size - 1))
-                else Teal
+                else if (isSelected) Color.White else InkSoft
             }
             Spacer(Modifier.height(3.dp))
             Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor ?: Color.Transparent))

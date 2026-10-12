@@ -25,6 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
@@ -49,20 +54,20 @@ fun DataScreen(onManage: () -> Unit) {
         if (uri != null) pendingImport = uri
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        SectionHeader("Your data")
-        Column(Modifier.padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
+        SectionHeader("Your journal")
+        Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
             val logged = data.entries.size
             val first = data.entries.keys.minOrNull()
-            Text("Days logged: $logged", fontSize = 16.sp, color = TextDark)
-            if (first != null) Text("First entry: $first", fontSize = 16.sp, color = TextDark)
-            Text("Active tracking points: ${data.points.count { !it.archived }}", fontSize = 16.sp, color = TextDark)
+            Text("$logged ${if (logged == 1) "day" else "days"} written", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Ink)
+            if (first != null) Text("since $first", fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+            Text("${data.points.count { !it.archived }} tracking points in use", fontSize = 16.sp, color = Ink, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(10.dp))
             Text(
                 "Everything is stored in a single XML file on this phone:",
                 fontSize = 14.sp, color = TextGray,
             )
-            Text(Repo.filePath, fontSize = 12.sp, color = TextGray, fontFamily = FontFamily.Monospace)
+            Text(Repo.filePath, fontSize = 12.sp, color = InkFaint, fontFamily = FontFamily.Monospace)
             Text(
                 "Export it to save a backup or to open it on your computer for statistics. " +
                     "Each answer is saved with its number and its readable text, e.g. " +
@@ -71,26 +76,29 @@ fun DataScreen(onManage: () -> Unit) {
             )
         }
 
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp)) {
             Button(
                 onClick = { exportLauncher.launch("scrmoods-${LocalDate.now()}.xml") },
-                colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                contentPadding = PaddingValues(vertical = 14.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Export data (XML)") }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { importLauncher.launch(arrayOf("text/xml", "application/xml", "text/plain", "*/*")) },
+                border = BorderStroke(1.dp, Rule),
+                contentPadding = PaddingValues(vertical = 14.dp),
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Import data from file…", color = Purple) }
+            ) { Text("Import data from file…", color = Accent) }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onManage, modifier = Modifier.fillMaxWidth()) {
-                Text("Manage tracking points", color = Purple)
+            OutlinedButton(onClick = onManage, border = BorderStroke(1.dp, Rule), contentPadding = PaddingValues(vertical = 14.dp), modifier = Modifier.fillMaxWidth()) {
+                Text("Manage tracking points", color = Accent)
             }
         }
 
         Text(
             "Tip: export regularly. Uninstalling the app deletes its data on the phone.",
-            fontSize = 14.sp, color = Color(0xFF999999), modifier = Modifier.padding(horizontal = 16.dp),
+            fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 20.dp),
         )
         Spacer(Modifier.height(24.dp))
     }

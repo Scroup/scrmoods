@@ -1,4 +1,6 @@
 <resources>
-    <color name="purple">#FF38166B</color>
-    <color name="icon_bg">#FF38166B</color>
+    <color name="paper">#FFF7F0EC</color>
+    <color name="ink">#FF3B2A25</color>
+    <color name="accent">#FFA0594F</color>
+    <color name="icon_bg">#FFA0594F</color>
 </resources>

@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -101,30 +102,32 @@ fun GraphScreen() {
         Text("No tracking points to chart yet.", modifier = Modifier.padding(16.dp), color = TextGray)
         return
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
 
-        // Point picker
-        Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp)) {
-            Row(
+        // The chosen tracking point is the page heading; tap it to pick another.
+        Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
+            Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, Border, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable { menuOpen = true }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(vertical = 4.dp),
             ) {
-                Text(
-                    point.label + if (point.archived) " (removed)" else "",
-                    fontSize = 17.sp, color = TextDark, modifier = Modifier.weight(1f),
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                )
-                Icon(Icons.Filled.ArrowDropDown, null, tint = TextGray)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        point.label + if (point.archived) " (removed)" else "",
+                        fontSize = 25.sp, lineHeight = 31.sp, fontWeight = FontWeight.Medium, color = Ink,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    )
+                    Icon(Icons.Filled.ArrowDropDown, null, tint = Accent)
+                }
+                Text("Tap to look at another tracking point", fontSize = 15.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 for (p in chartable) {
                     DropdownMenuItem(
-                        text = { Text(p.label + if (p.archived) " (removed)" else "", maxLines = 2) },
+                        text = { Text(p.label + if (p.archived) " (removed)" else "", maxLines = 2, color = Ink) },
                         onClick = { pointId = p.id; menuOpen = false },
                     )
                 }
@@ -133,21 +136,30 @@ fun GraphScreen() {
 
         Segmented(
             ranges.map { it.second }, rangeIdx, { if (it != null) rangeIdx = it },
-            Modifier.padding(horizontal = 12.dp, vertical = 12.dp), minHeight = 40,
+            Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp), minHeight = 38,
         )
 
-        Chart(point, days)
+        Column(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Page)
+                .border(1.dp, Rule, RoundedCornerShape(16.dp))
+                .padding(top = 10.dp, bottom = 8.dp),
+        ) {
+            Chart(point, days)
 
         val dfmt = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
         Row(Modifier.fillMaxWidth().padding(start = 72.dp, end = 16.dp)) {
-            Text(days.first().format(dfmt), fontSize = 12.sp, color = TextGray, modifier = Modifier.weight(1f))
-            Text(days.last().format(dfmt), fontSize = 12.sp, color = TextGray)
+            Text(days.first().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
+            Text(days.last().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+        }
         }
 
         // Stats for the chosen point
         val s = stats(point, days)
-        SectionHeader("Statistics")
-        Column(Modifier.padding(horizontal = 16.dp)) {
+        SectionHeader("In numbers")
+        Column(Modifier.padding(horizontal = 20.dp).padding(top = 10.dp)) {
             StatLine("Days answered", "${s?.count ?: 0} of $nDays")
             if (s != null) when (point.type) {
                 PointType.YESNO -> {
@@ -174,16 +186,16 @@ fun GraphScreen() {
         }
 
         // Overview of everything in the same period
-        SectionHeader("All tracking points, last ${ranges[rangeIdx].second}")
+        SectionHeader("Everything, last ${ranges[rangeIdx].second}")
         for (p in chartable.filter { !it.archived }) {
             Row(
-                Modifier.fillMaxWidth().clickable { pointId = p.id }.padding(horizontal = 16.dp, vertical = 8.dp),
+                Modifier.fillMaxWidth().clickable { pointId = p.id }.padding(horizontal = 20.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(p.label, fontSize = 15.sp, color = TextDark, modifier = Modifier.weight(1f).padding(end = 8.dp))
-                Text(summary(p, stats(p, days)), fontSize = 14.sp, color = TextGray, modifier = Modifier.widthIn(max = 170.dp))
+                Text(p.label, fontSize = 15.5.sp, lineHeight = 21.sp, color = Ink, modifier = Modifier.weight(1f).padding(end = 8.dp))
+                Text(summary(p, stats(p, days)), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.widthIn(max = 170.dp))
             }
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
+            HorizontalDivider(Modifier.padding(horizontal = 20.dp), color = Rule)
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -207,7 +219,7 @@ private fun StatLine(label: String, value: String) {
 private fun DistBar(label: String, count: Int, total: Int, color: Color) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 14.sp, color = TextDark, modifier = Modifier.width(100.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Box(Modifier.weight(1f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
+        Box(Modifier.weight(1f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Paper)) {
             if (count > 0) Box(
                 Modifier.fillMaxHeight().fillMaxWidth(count.toFloat() / total).clip(RoundedCornerShape(4.dp)).background(color),
             )
@@ -248,7 +260,7 @@ private fun Chart(p: TrackingPoint, days: List<LocalDate>) {
             val gridCount = labels.size
             for (g in 0 until gridCount) {
                 val gy = top + h * g / (gridCount - 1).coerceAtLeast(1)
-                drawLine(Color(0xFFE8E8E8), Offset(0f, gy), Offset(size.width, gy), strokeWidth = 1.dp.toPx())
+                drawLine(Rule, Offset(0f, gy), Offset(size.width, gy), strokeWidth = 1.dp.toPx())
             }
 
             if (p.type == PointType.YESNO) {
@@ -269,7 +281,7 @@ private fun Chart(p: TrackingPoint, days: List<LocalDate>) {
                     val px = x(i); val py = y(v.coerceIn(lo, hi))
                     if (!started) { path.moveTo(px, py); started = true } else path.lineTo(px, py)
                 }
-                drawPath(path, Purple.copy(alpha = 0.6f), style = Stroke(width = 2.dp.toPx()))
+                drawPath(path, Accent.copy(alpha = 0.55f), style = Stroke(width = 2.dp.toPx()))
                 val r = if (n > 120) 2.5.dp.toPx() else 4.dp.toPx()
                 values.forEachIndexed { i, v ->
                     if (v == null) return@forEachIndexed

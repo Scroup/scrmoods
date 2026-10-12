@@ -6,21 +6,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,29 +34,72 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val Purple = Color(0xFF38166B)
-val Teal = Color(0xFF5FA7C3)
-val LinkBlue = Color(0xFF4F9CBF)
-val SectionGray = Color(0xFFF4F4F4)
-val Border = Color(0xFFD9DCDF)
-val TextGray = Color(0xFF555555)
-val TextDark = Color(0xFF222222)
+// ---------- palette: cocoa ink on blush paper, dusty rosewood accent ----------
+val Paper = Color(0xFFF7F0EC)      // screen background
+val Page = Color(0xFFFDF9F7)       // raised surfaces: chips, note page, dialogs
+val Ink = Color(0xFF3B2A25)        // main text
+val InkSoft = Color(0xFF8A736B)    // secondary text
+val InkFaint = Color(0xFFBBA79F)   // hints, disabled
+val Rule = Color(0xFFEADCD5)       // hairlines, outlines, ruled lines
+val Accent = Color(0xFFA0594F)     // rosewood: selections, headings, links
+val AccentWash = Color(0xFFF1DFD9) // light accent tint
+val Danger = Color(0xFFA8463F)
+
+// Old names still used by some screens.
+val Purple = Accent
+val Teal = Accent
+val LinkBlue = Accent
+val TextDark = Ink
+val TextGray = InkSoft
+val Border = Rule
+
+// ---------- type: Lora, a calligraphic book serif (SIL Open Font License) ----------
+val Lora = FontFamily(
+    Font(R.font.lora_regular, FontWeight.Normal),
+    Font(R.font.lora_medium, FontWeight.Medium),
+    Font(R.font.lora_semibold, FontWeight.SemiBold),
+    Font(R.font.lora_italic, FontWeight.Normal, FontStyle.Italic),
+    Font(R.font.lora_medium_italic, FontWeight.Medium, FontStyle.Italic),
+)
+
+private fun Typography.withFamily(f: FontFamily): Typography {
+    fun TextStyle.f() = copy(fontFamily = f)
+    return copy(
+        displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
+        headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),
+        titleLarge = titleLarge.f(), titleMedium = titleMedium.f(), titleSmall = titleSmall.f(),
+        bodyLarge = bodyLarge.f(), bodyMedium = bodyMedium.f(), bodySmall = bodySmall.f(),
+        labelLarge = labelLarge.f(), labelMedium = labelMedium.f(), labelSmall = labelSmall.f(),
+    )
+}
 
 @Composable
 fun ScrmoodsTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
-            primary = Purple,
+            primary = Accent,
             onPrimary = Color.White,
-            secondary = Teal,
-            background = Color.White,
-            surface = Color.White,
+            primaryContainer = AccentWash,
+            secondary = Accent,
+            secondaryContainer = AccentWash,
+            background = Paper,
+            surface = Page,
+            surfaceContainerHigh = Page,
+            surfaceContainer = Page,
+            onSurface = Ink,
+            onSurfaceVariant = InkSoft,
+            outline = Rule,
         ),
+        typography = Typography().withFamily(Lora),
         content = content,
     )
 }
@@ -72,48 +115,42 @@ val BarChartIcon: ImageVector by lazy {
     }.build()
 }
 
-/** A row of joined buttons like "Not at all | Somewhat | Fairly | Very". Tapping the selected one clears it. */
+/**
+ * A row of rounded answer pills, e.g. "Not at all · Somewhat · Fairly · Very".
+ * Tapping the selected pill again clears the answer. Long lists wrap onto rows of up to 5.
+ */
 @Composable
 fun Segmented(
     options: List<String>,
     selected: Int?,
     onSelect: (Int?) -> Unit,
     modifier: Modifier = Modifier,
-    minHeight: Int = 48,
+    minHeight: Int = 42,
 ) {
-    // Long option lists wrap onto several rows of up to 5.
-    val rows = options.withIndex().chunked(5)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (row in rows) {
-            val shape = RoundedCornerShape(8.dp)
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
-                    .clip(shape)
-                    .border(1.dp, Border, shape)
-                    .background(Color.White),
-            ) {
-                row.forEachIndexed { i, (index, label) ->
-                    if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(Border))
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (row in options.withIndex().chunked(5)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((index, label) in row) {
                     val isSel = selected == index
+                    val shape = RoundedCornerShape(50)
                     Box(
                         Modifier
                             .weight(1f)
-                            .fillMaxHeight()
                             .heightIn(min = minHeight.dp)
-                            .background(if (isSel) Purple else Color.White)
+                            .clip(shape)
+                            .background(if (isSel) Accent else Page)
+                            .border(1.dp, if (isSel) Accent else Rule, shape)
                             .clickable { onSelect(if (isSel) null else index) }
-                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             label,
-                            color = if (isSel) Color.White else TextDark,
-                            fontSize = 15.sp,
+                            color = if (isSel) Color.White else Ink,
+                            fontSize = 14.5.sp,
                             textAlign = TextAlign.Center,
-                            fontWeight = if (isSel) FontWeight.Medium else FontWeight.Normal,
                             maxLines = 2,
+                            lineHeight = 17.sp,
                         )
                     }
                 }
@@ -122,28 +159,62 @@ fun Segmented(
     }
 }
 
+/** Italic section title followed by a hairline, like a chapter heading in a notebook. */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(top = 18.dp, bottom = 6.dp)) {
-        Text(title, fontSize = 21.sp, color = TextDark, modifier = Modifier.padding(horizontal = 16.dp))
-        HorizontalDivider(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp), color = Color(0xFFE6E6E6))
+    Row(
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 30.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            fontSize = 21.sp,
+            fontStyle = FontStyle.Italic,
+            color = Accent,
+        )
+        Box(Modifier.weight(1f).padding(start = 14.dp).height(1.dp).background(Rule))
     }
 }
 
+/** Quiet text action in italic violet ink, e.g. "+ Add custom tracking point". */
 @Composable
 fun LinkButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Text(
         text,
-        color = LinkBlue,
-        fontSize = 19.sp,
+        color = Accent,
+        fontSize = 16.sp,
+        fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Medium,
-        textAlign = TextAlign.Center,
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     )
 }
+
+/** Small round outlined button (date arrows, slider − / +). */
+@Composable
+fun RoundButton(enabled: Boolean = true, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Page)
+            .border(1.dp, Rule, CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+@Composable
+fun journalFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Accent,
+    unfocusedBorderColor = Rule,
+    focusedLabelColor = Accent,
+    cursorColor = Accent,
+    focusedContainerColor = Page,
+    unfocusedContainerColor = Page,
+)
 
 @Composable
 fun TextInputDialog(
@@ -158,7 +229,9 @@ fun TextInputDialog(
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        containerColor = Page,
+        shape = RoundedCornerShape(22.dp),
+        title = { Text(title, fontWeight = FontWeight.Medium) },
         text = {
             OutlinedTextField(
                 value = text,
@@ -166,11 +239,12 @@ fun TextInputDialog(
                 label = if (label.isNotEmpty()) ({ Text(label) }) else null,
                 singleLine = singleLine,
                 minLines = if (singleLine) 1 else 4,
+                colors = journalFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(confirmText) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onSave(text) }) { Text(confirmText, color = Accent, fontWeight = FontWeight.Medium) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = InkSoft) } },
     )
 }
 
@@ -184,12 +258,11 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmText) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Page,
+        shape = RoundedCornerShape(22.dp),
+        title = { Text(title, fontWeight = FontWeight.Medium) },
+        text = { Text(message, color = InkSoft, lineHeight = 22.sp) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmText, color = Accent, fontWeight = FontWeight.Medium) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = InkSoft) } },
     )
 }
-
-@Composable
-fun Spacer8() = androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))

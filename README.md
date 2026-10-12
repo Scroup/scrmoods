@@ -61,18 +61,9 @@ python tools/scrmoods_to_csv.py scrmoods-2026-10-11.xml
 python tools/scrmoods_to_csv.py scrmoods-2026-10-11.xml --text   # "Positive" instead of 2
 ```
 
-## iPhone version (web app)
+## iPhone version
 
-The `docs` folder holds the same app as an offline web app, for iPhone (or any browser). It uses the same questions, custom tracking points and XML file format, so you can export on one device and import on the other.
-
-**Turn it on once:** on GitHub, open the repo → **Settings → Pages** → under *Build and deployment* choose **Deploy from a branch**, branch **main**, folder **/docs** → Save. After a minute the app is live at **https://scroup.github.io/scrmoods/**.
-
-**Install on the iPhone:** open that link in **Safari** → Share button → **Add to Home Screen**. It then opens full-screen from its own icon and works offline.
-
-Good to know:
-- The data lives on the phone inside the home-screen app. Removing the app from the home screen deletes it, so use **Data → Export** (choose *Save to Files*) regularly.
-- The home-screen app and the Safari tab keep separate data. Always use the home-screen icon.
-- After you push changes to `docs`, the app updates the next time it's opened (sometimes it takes two launches). If you change files in `docs`, also bump `VERSION` in `docs/sw.js`.
+The iPhone version is a separate web app in its own public repository, **scrmoods-web** (https://scroup.github.io/scrmoods-web/). It uses the same XML file format, so you can export from one app and import into the other.
 
 ## Building on your own computer (optional)
 
