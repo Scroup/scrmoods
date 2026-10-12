@@ -126,7 +126,7 @@ fun DataScreen(onManage: () -> Unit) {
 
         SettingSwitch(
             "Good night celebration",
-            "When today's questions and note are done: confetti, a good-night wish and a short lullaby.",
+            "A \"Finish the day\" button under today's note: confetti, a good-night wish and a short lullaby.",
             GoodNight.enabled,
         ) { GoodNight.setEnabled(context, it) }
         if (GoodNight.enabled) {

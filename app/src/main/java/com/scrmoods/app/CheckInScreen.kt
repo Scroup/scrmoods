@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import android.os.SystemClock
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -154,19 +153,6 @@ fun CheckInScreen(
     val key = date.toString()
     val entry = data.entries[key] ?: DayEntry(key)
     val context = LocalContext.current
-    val focus = LocalFocusManager.current
-
-    // Good night: when today goes from unfinished to finished (all questions + note), celebrate once.
-    val complete = GoodNight.isComplete(data, entry)
-    LaunchedEffect(key, complete) { if (!complete) GoodNight.unfinished = key }
-    LaunchedEffect(key, entry, complete, GoodNight.unfinished) {
-        if (!complete || GoodNight.unfinished != key || !GoodNight.enabled) return@LaunchedEffect
-        if (key != LocalDate.now().toString() || GoodNight.doneFor(context, key)) return@LaunchedEffect
-        delay(1500)
-        GoodNight.waitForQuiet()
-        focus.clearFocus()
-        GoodNight.celebrate(context, key)
-    }
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         JournalDateHeader(date, onDateChange)
@@ -213,10 +199,9 @@ fun CheckInScreen(
 
         JournalCard(bottomPadding = 4.dp) {
             SectionHeader("Today's note", horizontal = Gutter, top = 16.dp)
-            RuledNote(key, entry.note)
+            RuledNote(key, entry.note, onFinish = if (GoodNight.enabled) ({ GoodNight.celebrate(context, key) }) else null)
         }
 
-        JournalCard { TimedNotes(key, entry) }
         Spacer(Modifier.height(28.dp))
     }
 }
@@ -371,7 +356,8 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
 
 /** The day's note, written straight onto ruled notebook lines. Saved shortly after you stop typing. */
 @Composable
-private fun RuledNote(dateKey: String, saved: String) {
+private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = null) {
+    val focus = LocalFocusManager.current
     var text by remember(dateKey) { mutableStateOf(saved) }
     // Save anything still pending when you turn to another day.
     val latest by rememberUpdatedState(text)
@@ -388,7 +374,7 @@ private fun RuledNote(dateKey: String, saved: String) {
     val padTop = 10.dp
     BasicTextField(
         value = text,
-        onValueChange = { text = it; GoodNight.lastNoteEdit = SystemClock.uptimeMillis() },
+        onValueChange = { text = it },
         textStyle = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, color = Ink),
         cursorBrush = SolidColor(Accent),
         modifier = Modifier
@@ -414,51 +400,34 @@ private fun RuledNote(dateKey: String, saved: String) {
             }
         },
     )
+    if (onFinish != null) FinishDayButton(done = GoodNight.finished == dateKey) {
+        Repo.setNote(dateKey, text)   // save right away, don't wait for the pause in typing
+        focus.clearFocus()            // closes the keyboard
+        onFinish()
+    }
 }
 
+/** Under the note: ends the day with the good-night celebration. After that it shows the day is done (tap to see it again). */
 @Composable
-private fun TimedNotes(dateKey: String, entry: DayEntry) {
-    var addTimed by remember { mutableStateOf(false) }
-    var deleteIndex by remember { mutableStateOf<Int?>(null) }
-
-    SectionHeader("Through the day", horizontal = Gutter, top = 16.dp)
-    Column(Modifier.padding(top = 8.dp)) {
-        entry.timedNotes.forEachIndexed { i, n ->
-            Row(Modifier.fillMaxWidth().padding(start = Gutter, end = 4.dp, top = 6.dp), verticalAlignment = Alignment.Top) {
-                Text(
-                    n.time.substringAfter(' '),
-                    color = Accent, fontSize = 14.sp, fontStyle = FontStyle.Italic,
-                    modifier = Modifier.width(52.dp).padding(top = 2.dp),
-                )
-                Text(n.text, color = Ink, fontSize = 15.5.sp, lineHeight = 21.sp, modifier = Modifier.weight(1f))
-                IconButton(onClick = { deleteIndex = i }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, "Delete note", tint = InkFaint, modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-        LinkButton("+ Add a timestamped note", Modifier.padding(start = Gutter - 12.dp, top = 4.dp)) { addTimed = true }
-    }
-
-    if (addTimed) TextInputDialog(
-        title = "Note for right now",
-        initial = "",
-        confirmText = "Add",
-        onDismiss = { addTimed = false },
-        onSave = {
-            if (it.isNotBlank()) {
-                val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-                Repo.addTimedNote(dateKey, "$dateKey $time", it)
-            }
-            addTimed = false
-        },
-    )
-    deleteIndex?.let { idx ->
-        ConfirmDialog(
-            title = "Delete this note?",
-            message = entry.timedNotes.getOrNull(idx)?.text ?: "",
-            confirmText = "Delete",
-            onDismiss = { deleteIndex = null },
-            onConfirm = { Repo.removeTimedNote(dateKey, idx); deleteIndex = null },
+private fun FinishDayButton(done: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier
+            .padding(start = Gutter, end = Gutter, top = 4.dp, bottom = 14.dp)
+            .fillMaxWidth()
+            .clip(shape)
+            .then(if (done) Modifier.border(1.dp, Rule, shape) else Modifier.background(Accent))
+            .clickable(onClick = onClick)
+            .padding(vertical = 13.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            if (done) "Day finished  ✓" else "Finish the day  ☾",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            fontStyle = if (done) FontStyle.Italic else FontStyle.Normal,
+            color = if (done) Accent else OnAccent,
         )
     }
 }

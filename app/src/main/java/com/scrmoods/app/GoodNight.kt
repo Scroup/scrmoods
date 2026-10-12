@@ -4,7 +4,6 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -52,9 +51,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The good-night moment: once every question for today is answered and the note is written,
- * the journal fills with twinkling confetti, a short lullaby plays, and the app wishes you good night.
- * Shown at most once per day.
+ * The good-night moment: tap "Finish the day" under the note and the journal fills with
+ * twinkling confetti, a short lullaby plays, and the app wishes you good night.
  */
 object GoodNight {
     private const val PREFS = "look"
@@ -68,16 +66,15 @@ object GoodNight {
     /** The date being celebrated while the overlay is on screen. */
     var showing by mutableStateOf<String?>(null)
 
-    /** The day last seen unfinished this session; only a day you finish while the app is open gets celebrated. */
-    var unfinished by mutableStateOf<String?>(null)
-
-    /** When a key was last pressed in today's note, so the celebration waits until you stop writing. */
-    @Volatile var lastNoteEdit = 0L
+    /** The last day you tapped "Finish the day" for (the button then shows it's done). */
+    var finished by mutableStateOf<String?>(null)
+        private set
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         enabled = prefs.getBoolean("goodnight", true)
         melody = prefs.getBoolean("goodnight_melody", true)
+        finished = prefs.getString("goodnight_last", null)
     }
 
     fun setEnabled(context: Context, on: Boolean) {
@@ -89,9 +86,6 @@ object GoodNight {
         melody = on
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("goodnight_melody", on).apply()
     }
-
-    fun doneFor(context: Context, date: String): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("goodnight_last", null) == date
 
     /**
      * True when every visible question has an answer and the note isn't empty.
@@ -110,22 +104,14 @@ object GoodNight {
         return true
     }
 
-    /** Shows the overlay and plays the melody. [date] is remembered so it happens once a day. */
+    /** Shows the overlay and plays the melody. [remember] marks the day as finished. */
     fun celebrate(context: Context, date: String, remember: Boolean = true) {
         if (remember) {
+            finished = date
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("goodnight_last", date).apply()
         }
         showing = date
         if (melody) Lullaby.play()
-    }
-
-    /** Waits until you've stopped typing in the note for a few seconds. */
-    suspend fun waitForQuiet() {
-        while (true) {
-            val idle = SystemClock.uptimeMillis() - lastNoteEdit
-            if (idle >= 5000) return
-            kotlinx.coroutines.delay(5000 - idle)
-        }
     }
 
     private val wishes = listOf(
@@ -337,8 +323,9 @@ fun GoodNightOverlay() {
                 fontSize = 34.sp, fontWeight = FontWeight.Medium, color = Ink,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            val complete = GoodNight.isComplete(Repo.data, Repo.data.entries[date] ?: DayEntry(date))
             Text(
-                "Today's journal is complete.",
+                if (complete) "Today's journal is complete." else "Today is saved.",
                 fontSize = 15.sp, fontStyle = FontStyle.Italic, color = Accent,
                 modifier = Modifier.padding(top = 6.dp),
             )
