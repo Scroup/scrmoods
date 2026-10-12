@@ -170,7 +170,7 @@ private fun DayCell(
                 fontSize = 16.sp,
                 fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
                 color = when {
-                    isSelected -> Color.White
+                    isSelected -> OnAccent
                     isFuture -> InkFaint
                     else -> TextDark
                 },
@@ -178,7 +178,7 @@ private fun DayCell(
             val dotColor: Color? = entry?.let { e ->
                 val v = outlook?.let { e.values[it.id]?.toIntOrNull() }
                 if (v != null && outlook != null && outlook.options.size > 1) moodColor(v.toFloat() / (outlook.options.size - 1))
-                else if (isSelected) Color.White else InkSoft
+                else if (isSelected) OnAccent else InkSoft
             }
             Spacer(Modifier.height(3.dp))
             Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor ?: Color.Transparent))

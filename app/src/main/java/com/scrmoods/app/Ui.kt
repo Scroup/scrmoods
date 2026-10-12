@@ -57,22 +57,32 @@ data class Palette(
     val rule: Color,
     val accent: Color,
     val accentWash: Color,
+    /** Text and icons drawn on the accent colour. */
+    val onAccent: Color = Color.White,
+    /** Dark background: the status bar gets light icons. */
+    val dark: Boolean = false,
 )
 
 object Themes {
+    /** Eight distinct, soft palettes; each has its own hue and a brighter accent. */
     val all = listOf(
-        Palette("rosewood", "Rosewood", Color(0xFFEFE4DF), Color(0xFFFCF8F6), Color(0xFF3B2A25), Color(0xFF86706A),
-            Color(0xFFB9A59D), Color(0xFFE3D3CC), Color(0xFFA0594F), Color(0xFFF0DCD5)),
-        Palette("sepia", "Sepia", Color(0xFFEADFCF), Color(0xFFFBF6EE), Color(0xFF4F3933), Color(0xFF85695A),
-            Color(0xFFBCA893), Color(0xFFE0D2BF), Color(0xFF945B46), Color(0xFFF0E0D0)),
-        Palette("honey", "Honey", Color(0xFFF3E3C8), Color(0xFFFFF9EE), Color(0xFF4F3933), Color(0xFF8C6B4E),
-            Color(0xFFC9AE86), Color(0xFFEBD8B6), Color(0xFFB0703F), Color(0xFFF8E6CB)),
-        Palette("sage", "Sage", Color(0xFFE6E3D3), Color(0xFFFAF8F0), Color(0xFF45382C), Color(0xFF7C7563),
-            Color(0xFFB3AE99), Color(0xFFDAD6C2), Color(0xFF6E7A52), Color(0xFFE6E9D6)),
-        Palette("cocoa", "Cocoa", Color(0xFFE6D8CE), Color(0xFFF8F1EB), Color(0xFF4F3933), Color(0xFF7E5F52),
-            Color(0xFFB39C8E), Color(0xFFDBC8BB), Color(0xFF6C4438), Color(0xFFEBDAD0)),
-        Palette("blush", "Blush", Color(0xFFF1E1DA), Color(0xFFFDF7F4), Color(0xFF5A3F33), Color(0xFF957068),
-            Color(0xFFC4A69D), Color(0xFFEBD5CC), Color(0xFFB0685C), Color(0xFFF5E1DA)),
+        Palette("rosewood", "Rosewood", Color(0xFFF3E1DC), Color(0xFFFFF8F5), Color(0xFF3B2A25), Color(0xFF8A6B63),
+            Color(0xFFC2A49B), Color(0xFFEBCFC6), Color(0xFFC0584A), Color(0xFFF9DCD3)),
+        Palette("peach", "Peach", Color(0xFFFCE3CF), Color(0xFFFFF8F1), Color(0xFF43291C), Color(0xFF93684F),
+            Color(0xFFCFA588), Color(0xFFF3D0B5), Color(0xFFDB6E35), Color(0xFFFFE0CB)),
+        Palette("butter", "Butter", Color(0xFFFAEDC4), Color(0xFFFFFBEC), Color(0xFF3F3215), Color(0xFF85714A),
+            Color(0xFFC4AE7A), Color(0xFFEEDDA8), Color(0xFFB57E0E), Color(0xFFFBEAB6)),
+        Palette("matcha", "Matcha", Color(0xFFE3EDD8), Color(0xFFF9FCF4), Color(0xFF26331F), Color(0xFF5F7351),
+            Color(0xFFA2B393), Color(0xFFCFDDBF), Color(0xFF5C8A3E), Color(0xFFDDEDCC)),
+        Palette("lavender", "Lavender", Color(0xFFECE3F4), Color(0xFFFCF9FF), Color(0xFF33263F), Color(0xFF77648A),
+            Color(0xFFB4A5C4), Color(0xFFDED0EC), Color(0xFF8A5BB8), Color(0xFFEBDCF7)),
+        Palette("berry", "Berry", Color(0xFFF7DFE8), Color(0xFFFFF7FA), Color(0xFF3D2030), Color(0xFF8F5F74),
+            Color(0xFFC99AAD), Color(0xFFEFC9D7), Color(0xFFC24A7C), Color(0xFFFBD9E6)),
+        Palette("sepia", "Sepia", Color(0xFFEADCC6), Color(0xFFFAF4EA), Color(0xFF4A3428), Color(0xFF85695A),
+            Color(0xFFBCA48C), Color(0xFFDECDB4), Color(0xFF8E5A3C), Color(0xFFEFDCC5)),
+        Palette("night", "Night", Color(0xFF221A17), Color(0xFF2E2420), Color(0xFFF1E4DC), Color(0xFFBCA79C),
+            Color(0xFF7E6B62), Color(0xFF44362F), Color(0xFFE39A7E), Color(0xFF4A3129),
+            onAccent = Color(0xFF2A1C17), dark = true),
     )
 
     var current by mutableStateOf(all[0])
@@ -86,7 +96,11 @@ object Themes {
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        current = all.firstOrNull { it.id == prefs.getString("theme", null) } ?: all[0]
+        // themes from earlier versions map to their closest new one
+        val saved = when (val id = prefs.getString("theme", null)) {
+            "honey" -> "butter"; "sage" -> "matcha"; "cocoa" -> "sepia"; "blush" -> "berry"; else -> id
+        }
+        current = all.firstOrNull { it.id == saved } ?: all[0]
         showQuote = prefs.getBoolean("quote", true)
     }
 
@@ -110,6 +124,7 @@ val InkFaint: Color get() = Themes.current.inkFaint     // hints, disabled
 val Rule: Color get() = Themes.current.rule             // hairlines, outlines, ruled lines
 val Accent: Color get() = Themes.current.accent         // selections, headings, links
 val AccentWash: Color get() = Themes.current.accentWash // light accent tint
+val OnAccent: Color get() = Themes.current.onAccent     // text/icons on the accent colour
 val Danger = Color(0xFFA8463F)
 
 // Old names still used by some screens.
@@ -145,7 +160,8 @@ fun ScrmoodsTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = Accent,
-            onPrimary = Color.White,
+            onPrimary = OnAccent,
+            onBackground = Ink,
             primaryContainer = AccentWash,
             secondary = Accent,
             secondaryContainer = AccentWash,
@@ -211,7 +227,7 @@ fun Segmented(
                     ) {
                         Text(
                             label,
-                            color = if (isSel) Color.White else Ink,
+                            color = if (isSel) OnAccent else Ink,
                             fontSize = fontSize.sp,
                             textAlign = TextAlign.Center,
                             maxLines = 1,

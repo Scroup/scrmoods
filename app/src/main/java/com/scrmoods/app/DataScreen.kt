@@ -89,7 +89,7 @@ fun DataScreen(onManage: () -> Unit) {
                     onCheckedChange = { Repo.setSectionHidden(Sections.BIPOLAR, !it) },
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = Accent,
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = OnAccent,
                         uncheckedTrackColor = Paper,
                         uncheckedThumbColor = InkFaint,
                         uncheckedBorderColor = Rule,
@@ -115,7 +115,7 @@ fun DataScreen(onManage: () -> Unit) {
                 onCheckedChange = { Themes.setShowQuote(context, it) },
                 colors = SwitchDefaults.colors(
                     checkedTrackColor = Accent,
-                    checkedThumbColor = Color.White,
+                    checkedThumbColor = OnAccent,
                     uncheckedTrackColor = Paper,
                     uncheckedThumbColor = InkFaint,
                     uncheckedBorderColor = Rule,
@@ -197,7 +197,7 @@ private fun ThemePicker() {
     val context = LocalContext.current
     val current = Themes.current
     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
-        for (row in Themes.all.chunked(3)) {
+        for (row in Themes.all.chunked(4)) {
             Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (t in row) {
                     val selected = t.id == current.id

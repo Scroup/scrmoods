@@ -173,7 +173,7 @@ fun MoodScaleCard(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 softWrap = false,
-                color = if (isMixed) Color.White else Accent,
+                color = if (isMixed) OnAccent else Accent,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(if (isMixed) Accent else Paper)

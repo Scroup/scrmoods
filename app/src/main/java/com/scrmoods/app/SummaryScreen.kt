@@ -125,11 +125,11 @@ fun SummaryButton(periodLabel: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Summary", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.White)
-            Text("How your last $periodLabel went, in words", fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = Color.White.copy(alpha = 0.85f))
+            Text("Summary", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = OnAccent)
+            Text("How your last $periodLabel went, in words", fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = OnAccent.copy(alpha = 0.85f))
         }
-        Box(Modifier.size(34.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-            Text("✦", fontSize = 16.sp, color = Color.White)
+        Box(Modifier.size(34.dp).clip(RoundedCornerShape(50)).background(OnAccent.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+            Text("✦", fontSize = 16.sp, color = OnAccent)
         }
     }
 }

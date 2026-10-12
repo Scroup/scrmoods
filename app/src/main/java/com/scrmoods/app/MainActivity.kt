@@ -3,6 +3,7 @@ package com.scrmoods.app
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
+import androidx.core.view.WindowCompat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -65,9 +66,15 @@ class MainActivity : ComponentActivity() {
             ScrmoodsTheme {
                 // Status and navigation bars take the theme's paper colour.
                 val bar = Paper.toArgb()
+                val dark = Themes.current.dark
                 SideEffect {
                     window.statusBarColor = bar
                     window.navigationBarColor = bar
+                    // dark icons on light themes, light icons on Night
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = !dark
+                        isAppearanceLightNavigationBars = !dark
+                    }
                 }
                 App()
             }
@@ -138,6 +145,7 @@ fun App() {
             }
         },
         containerColor = Paper,
+        contentColor = Ink,
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             if (manage) {
