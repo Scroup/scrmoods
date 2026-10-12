@@ -98,6 +98,31 @@ fun DataScreen(onManage: () -> Unit) {
             }
         }
 
+        Row(
+            Modifier.fillMaxWidth().clickable { Themes.setShowQuote(context, !Themes.showQuote) }
+                .padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Quote of the day", fontSize = 16.sp, color = Ink)
+                Text(
+                    "A quote or gentle reminder at the top of the journal, a new one each day.",
+                    fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                )
+            }
+            Switch(
+                checked = Themes.showQuote,
+                onCheckedChange = { Themes.setShowQuote(context, it) },
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = Accent,
+                    checkedThumbColor = Color.White,
+                    uncheckedTrackColor = Paper,
+                    uncheckedThumbColor = InkFaint,
+                    uncheckedBorderColor = Rule,
+                ),
+            )
+        }
+
         SectionHeader("Your journal")
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
             val logged = data.entries.size

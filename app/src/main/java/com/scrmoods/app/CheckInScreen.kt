@@ -105,6 +105,22 @@ fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     }
 }
 
+/** The day's quote, set like an epigraph: a large opening mark, the words in italic, the author below. */
+@Composable
+private fun QuoteOfTheDay(q: Quote) {
+    Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 24.dp, top = 10.dp, bottom = 4.dp)) {
+        Text("“", fontSize = 46.sp, lineHeight = 46.sp, color = Accent.copy(alpha = 0.55f), modifier = Modifier.width(26.dp))
+        Column(Modifier.padding(top = 6.dp)) {
+            Text(q.text, fontSize = 16.sp, lineHeight = 23.sp, fontStyle = FontStyle.Italic, color = Ink)
+            Text(
+                q.author ?: "A reminder for today",
+                fontSize = 13.sp, fontStyle = FontStyle.Italic, color = Accent,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+}
+
 /** Space between a journal page's edge and its content. */
 private val Gutter = 14.dp
 
@@ -137,6 +153,7 @@ fun CheckInScreen(
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         JournalDateHeader(date, onDateChange)
+        if (Themes.showQuote) QuoteOfTheDay(Quotes.forDate(date))
 
         for (section in data.sections) {
             if (section.hidden) continue

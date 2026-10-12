@@ -80,9 +80,19 @@ object Themes {
 
     private const val PREFS = "look"
 
+    /** Quote of the day at the top of the journal (Settings switch). */
+    var showQuote by mutableStateOf(true)
+        private set
+
     fun init(context: Context) {
-        val id = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("theme", null)
-        current = all.firstOrNull { it.id == id } ?: all[0]
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        current = all.firstOrNull { it.id == prefs.getString("theme", null) } ?: all[0]
+        showQuote = prefs.getBoolean("quote", true)
+    }
+
+    fun setShowQuote(context: Context, show: Boolean) {
+        showQuote = show
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("quote", show).apply()
     }
 
     fun select(context: Context, p: Palette) {
