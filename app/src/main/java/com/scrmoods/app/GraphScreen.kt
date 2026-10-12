@@ -116,13 +116,13 @@ fun GraphScreen() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         point.label + if (point.archived) " (removed)" else "",
-                        fontSize = 25.sp, lineHeight = 31.sp, fontWeight = FontWeight.Medium, color = Ink,
+                        fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium, color = Ink,
                         modifier = Modifier.weight(1f, fill = false),
                         maxLines = 3, overflow = TextOverflow.Ellipsis,
                     )
                     Icon(Icons.Filled.ArrowDropDown, null, tint = Accent)
                 }
-                Text("Tap to look at another tracking point", fontSize = 15.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+                Text("Tap to look at another tracking point", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 for (p in chartable) {

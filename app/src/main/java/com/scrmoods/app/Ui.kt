@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -117,6 +118,8 @@ val BarChartIcon: ImageVector by lazy {
 
 /**
  * A row of rounded answer pills, e.g. "Not at all · Somewhat · Fairly · Very".
+ * Labels always stay on one line: if any label doesn't fit, the text of the whole group shrinks
+ * a little (down to [minFont]) so every pill keeps the same size.
  * Tapping the selected pill again clears the answer. Long lists wrap onto rows of up to 5.
  */
 @Composable
@@ -125,11 +128,15 @@ fun Segmented(
     selected: Int?,
     onSelect: (Int?) -> Unit,
     modifier: Modifier = Modifier,
-    minHeight: Int = 42,
+    minHeight: Int = 44,
+    maxFont: Float = 14f,
+    minFont: Float = 10.5f,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    var fontSize by remember(options, maxFont) { mutableStateOf(maxFont) }
+    var settled by remember(options, maxFont) { mutableStateOf(false) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (row in options.withIndex().chunked(5)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for ((index, label) in row) {
                     val isSel = selected == index
                     val shape = RoundedCornerShape(50)
@@ -141,16 +148,22 @@ fun Segmented(
                             .background(if (isSel) Accent else Page)
                             .border(1.dp, if (isSel) Accent else Rule, shape)
                             .clickable { onSelect(if (isSel) null else index) }
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                            .padding(horizontal = 2.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             label,
                             color = if (isSel) Color.White else Ink,
-                            fontSize = 14.5.sp,
+                            fontSize = fontSize.sp,
                             textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            lineHeight = 17.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            onTextLayout = { r ->
+                                if (r.didOverflowWidth && fontSize > minFont) fontSize = (fontSize - 0.5f).coerceAtLeast(minFont)
+                                else settled = true
+                            },
+                            // Hidden until the size settles, so the shrinking never flickers on screen.
+                            modifier = Modifier.drawWithContent { if (settled) drawContent() },
                         )
                     }
                 }
@@ -163,12 +176,13 @@ fun Segmented(
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 30.dp, bottom = 2.dp),
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             title,
-            fontSize = 21.sp,
+            fontSize = 19.sp,
+            lineHeight = 24.sp,
             fontStyle = FontStyle.Italic,
             color = Accent,
         )
@@ -182,7 +196,7 @@ fun LinkButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit)
     Text(
         text,
         color = Accent,
-        fontSize = 16.sp,
+        fontSize = 15.sp,
         fontStyle = FontStyle.Italic,
         fontWeight = FontWeight.Medium,
         modifier = modifier

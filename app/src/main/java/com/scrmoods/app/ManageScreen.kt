@@ -61,7 +61,7 @@ fun ManageScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextDark) }
-            Text("Tracking points", fontSize = 26.sp, fontWeight = FontWeight.Medium, color = Ink)
+            Text("Tracking points", fontSize = 23.sp, fontWeight = FontWeight.Medium, color = Ink)
         }
 
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -80,7 +80,7 @@ fun ManageScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f).clickable { onEdit(p) }) {
-                            Text(p.label, fontSize = 16.sp, lineHeight = 21.sp, color = Ink)
+                            Text(p.label, fontSize = 15.sp, lineHeight = 20.sp, color = Ink)
                             Text(typeSummary(p), fontSize = 13.sp, color = InkSoft)
                         }
                         SmallIcon(Icons.Filled.KeyboardArrowUp, "Move up", enabled = i > 0) { Repo.move(p.id, -1) }

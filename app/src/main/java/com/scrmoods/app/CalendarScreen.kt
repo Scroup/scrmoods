@@ -72,9 +72,9 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
             Column(Modifier.weight(1f).clickable { month = YearMonth.from(today) }) {
                 Text(
                     month.format(DateTimeFormatter.ofPattern("LLLL", Locale.getDefault())).replaceFirstChar { it.uppercase() },
-                    fontSize = 36.sp, fontWeight = FontWeight.Medium, color = Ink, lineHeight = 42.sp,
+                    fontSize = 32.sp, fontWeight = FontWeight.Medium, color = Ink, lineHeight = 38.sp,
                 )
-                Text(month.year.toString(), fontSize = 17.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+                Text(month.year.toString(), fontSize = 15.5.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
             Row(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RoundButton(onClick = { month = month.minusMonths(1) }) {
