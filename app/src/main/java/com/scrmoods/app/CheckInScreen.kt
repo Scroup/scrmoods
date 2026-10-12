@@ -41,6 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import android.os.SystemClock
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -150,6 +153,20 @@ fun CheckInScreen(
     val data = Repo.data
     val key = date.toString()
     val entry = data.entries[key] ?: DayEntry(key)
+    val context = LocalContext.current
+    val focus = LocalFocusManager.current
+
+    // Good night: when today goes from unfinished to finished (all questions + note), celebrate once.
+    val complete = GoodNight.isComplete(data, entry)
+    LaunchedEffect(key, complete) { if (!complete) GoodNight.unfinished = key }
+    LaunchedEffect(key, entry, complete, GoodNight.unfinished) {
+        if (!complete || GoodNight.unfinished != key || !GoodNight.enabled) return@LaunchedEffect
+        if (key != LocalDate.now().toString() || GoodNight.doneFor(context, key)) return@LaunchedEffect
+        delay(1500)
+        GoodNight.waitForQuiet()
+        focus.clearFocus()
+        GoodNight.celebrate(context, key)
+    }
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         JournalDateHeader(date, onDateChange)
@@ -371,7 +388,7 @@ private fun RuledNote(dateKey: String, saved: String) {
     val padTop = 10.dp
     BasicTextField(
         value = text,
-        onValueChange = { text = it },
+        onValueChange = { text = it; GoodNight.lastNoteEdit = SystemClock.uptimeMillis() },
         textStyle = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, color = Ink),
         cursorBrush = SolidColor(Accent),
         modifier = Modifier

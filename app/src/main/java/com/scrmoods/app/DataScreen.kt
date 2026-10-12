@@ -124,6 +124,18 @@ fun DataScreen(onManage: () -> Unit) {
             )
         }
 
+        SettingSwitch(
+            "Good night celebration",
+            "When today's questions and note are done: confetti, a good-night wish and a short lullaby.",
+            GoodNight.enabled,
+        ) { GoodNight.setEnabled(context, it) }
+        if (GoodNight.enabled) {
+            SettingSwitch("Play the lullaby", "Uses your media volume.", GoodNight.melody) { GoodNight.setMelody(context, it) }
+            LinkButton("Preview the celebration", Modifier.padding(start = 8.dp)) {
+                GoodNight.celebrate(context, LocalDate.now().toString(), remember = false)
+            }
+        }
+
         SectionHeader("Your journal")
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
             val logged = data.entries.size
@@ -244,5 +256,31 @@ private fun ThemePicker() {
                 repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+    }
+}
+
+/** A setting with a title, a short explanation and a switch; tapping the row toggles it too. */
+@Composable
+private fun SettingSwitch(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable { onChange(!checked) }
+            .padding(start = 20.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, fontSize = 16.sp, color = Ink)
+            Text(description, fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = Accent,
+                checkedThumbColor = OnAccent,
+                uncheckedTrackColor = Paper,
+                uncheckedThumbColor = InkFaint,
+                uncheckedBorderColor = Rule,
+            ),
+        )
     }
 }

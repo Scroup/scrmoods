@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
         Themes.init(applicationContext)
+        GoodNight.init(applicationContext)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
         setContent {
@@ -76,7 +77,10 @@ class MainActivity : ComponentActivity() {
                         isAppearanceLightNavigationBars = !dark
                     }
                 }
-                App()
+                Box(Modifier.fillMaxSize()) {
+                    App()
+                    GoodNightOverlay()
+                }
             }
         }
     }
