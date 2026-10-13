@@ -114,6 +114,7 @@ fun GraphScreen() {
         val periodLabel = if (nDays == 365) "year" else "$nDays days"
         var showSummary by remember { mutableStateOf(false) }
         SummaryButton(periodLabel) { showSummary = true }
+        HeadsUpCard(Modifier.padding(horizontal = 6.dp), moreLabel = tr("Open the summary")) { showSummary = true }
         if (showSummary) {
             val pages = remember(rangeIdx, Lang.code) { SummaryLogic.build(Repo.data, days, periodLabel) }
             SummaryDialog(pages) { showSummary = false }
@@ -631,7 +632,9 @@ private fun WaterChart(p: TrackingPoint, days: List<LocalDate>) {
         note, fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
     )
-    SummaryLogic.waterMoodLine(Repo.data, days)?.let {
-        Text(it, fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
+    // how water went with your days (at least the last 30 days, so there's enough to compare)
+    val window = if (days.size >= 30) days else (29 downTo 0).map { days.last().minusDays(it.toLong()) }
+    Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Water.POINT }?.let {
+        Text(it.sentence + (it.advice?.let { a -> " $a" } ?: ""), fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
     }
 }

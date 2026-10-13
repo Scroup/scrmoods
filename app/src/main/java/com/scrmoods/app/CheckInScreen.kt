@@ -184,7 +184,9 @@ fun CheckInScreen(
         } else {
             QuickCheckInButton(Modifier.reveal(2), onClick = onQuick)
         }
-        var order = 3 // cards rise in one after another when the app opens
+        // something that has been off for about a week (little water with harder days, missed meds…)
+        if (date == LocalDate.now()) HeadsUpCard(Modifier.reveal(3))
+        var order = 4 // cards rise in one after another when the app opens
 
         for (section in sections) {
             if (section.hidden) continue

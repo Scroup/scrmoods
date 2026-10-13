@@ -7,7 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,10 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
@@ -71,28 +75,26 @@ fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: andr
             RoundButton(onClick = { set(drunk + 1) }) { Text("+", fontSize = 22.sp, color = Ink) }
         }
 
-        // the cups, eight to a row
+        // the cups, all in one row: they shrink to fit when there are many
         val count = maxOf(goal, drunk)
-        Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (row in (0 until count).chunked(8)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (i in row) {
-                        val full = i < drunk
-                        val pop = rememberPop()
-                        Box(
-                            Modifier
-                                .then(pop.modifier)
-                                .size(width = 34.dp, height = 42.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    Haptics.tap()
-                                    val n = if (i + 1 == drunk) i else i + 1
-                                    pop.fire(stars = n > drunk, color = Accent)
-                                    set(n)
-                                },
-                        ) { Cup(full, extra = i >= goal) }
-                    }
-                }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (i in 0 until count) {
+                val full = i < drunk
+                val pop = rememberPop()
+                Box(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .widthIn(max = 28.dp)
+                        .aspectRatio(28f / 34f)
+                        .then(pop.modifier)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            Haptics.tap()
+                            val n = if (i + 1 == drunk) i else i + 1
+                            pop.fire(stars = n > drunk, color = Accent)
+                            set(n)
+                        },
+                ) { Cup(full, extra = i >= goal) }
             }
         }
         Text(
@@ -107,33 +109,37 @@ fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: andr
     }
 }
 
-/** One glass: an outline, filled with the accent colour when drunk. Cups past the goal are drawn a little lighter. */
+/**
+ * One little glass with rounded bottom corners, drawn on a 28 × 34 grid (the web app uses the same shape).
+ * When drunk: wavy water in the accent colour and a small shine. Cups past the goal are a little lighter.
+ */
 @Composable
 private fun Cup(full: Boolean, extra: Boolean) {
     val accent = Accent
     val line = if (full) Accent else InkFaint
-    Canvas(Modifier.size(width = 34.dp, height = 42.dp)) {
-        val w = size.width
-        val h = size.height
-        val top = 5.dp.toPx()
-        val bottom = h - 4.dp.toPx()
-        val inset = 5.dp.toPx()
-        val taper = 4.dp.toPx()
-        val glass = Path().apply {
-            moveTo(inset, top)
-            lineTo(w - inset, top)
-            lineTo(w - inset - taper, bottom)
-            lineTo(inset + taper, bottom)
-            close()
-        }
+    Canvas(Modifier.fillMaxSize()) {
+        val sx = size.width / 28f
+        val sy = size.height / 34f
+        fun Path.m(x: Float, y: Float) = moveTo(x * sx, y * sy)
+        fun Path.l(x: Float, y: Float) = lineTo(x * sx, y * sy)
+        fun Path.q(cx: Float, cy: Float, x: Float, y: Float) = quadraticTo(cx * sx, cy * sy, x * sx, y * sy)
         if (full) {
-            clipPath(glass) {
-                val level = top + (bottom - top) * 0.22f
-                drawRect(accent.copy(alpha = if (extra) 0.45f else 0.78f), Offset(0f, level), Size(w, bottom - level))
-                drawLine(accent.copy(alpha = 0.35f), Offset(0f, level), Offset(w, level), strokeWidth = 2.dp.toPx())
+            val water = Path().apply {
+                m(4.75f, 10f)
+                q(7f, 8.8f, 9.4f, 10f); q(11.8f, 11.2f, 14f, 10f); q(16.4f, 8.8f, 18.6f, 10f); q(20.9f, 11.2f, 23.25f, 10f)
+                l(21.32f, 28f); q(21f, 31f, 18f, 31f); l(10f, 31f); q(7f, 31f, 6.68f, 28f)
+                close()
             }
+            drawPath(water, accent.copy(alpha = if (extra) 0.45f else 0.78f))
+            drawLine(
+                Color.White.copy(alpha = 0.65f), Offset(8.2f * sx, 14f * sy), Offset(8.9f * sx, 21f * sy),
+                strokeWidth = 1.6f * sx, cap = StrokeCap.Round,
+            )
         }
-        drawPath(glass, line, style = Stroke(width = 1.6.dp.toPx()))
+        val glass = Path().apply {
+            m(4f, 3f); l(6.68f, 28f); q(7f, 31f, 10f, 31f); l(18f, 31f); q(21f, 31f, 21.32f, 28f); l(24f, 3f)
+        }
+        drawPath(glass, line, style = Stroke(width = 1.7f * sx, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
 

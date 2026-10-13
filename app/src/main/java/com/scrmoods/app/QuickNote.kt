@@ -23,7 +23,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -140,23 +143,26 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
         try { focus.requestFocus() } catch (_: Exception) {}
     }
 
+    fun close() { Repo.flush(); onDone() } // water taps are saved as they happen
+
     fun save() {
         val t = text.trim()
         if (t.isNotEmpty()) {
             Haptics.tap()
             Repo.addQuickNote(LocalDate.now().toString(), time, t)
-            Repo.flush()
             Toast.makeText(context, tr("Added to today's note"), Toast.LENGTH_SHORT).show()
         }
-        onDone()
+        close()
     }
+    val today = LocalDate.now().toString()
+    val water = waterPoint(Repo.data)?.takeIf { Repo.data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false }
 
     Box(
         Modifier
             .fillMaxSize()
             .graphicsLayer { alpha = rise.value }
             .background(Color(0xFF2A1C17).copy(alpha = 0.35f))
-            .pointerInput(Unit) { detectTapGestures { onDone() } } // tap outside to close
+            .pointerInput(Unit) { detectTapGestures { close() } } // tap outside to close
             .imePadding()
             .navigationBarsPadding(),
         contentAlignment = Alignment.BottomCenter,
@@ -171,6 +177,8 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 .pointerInput(Unit) { detectTapGestures { } } // taps on the card stay on the card
                 .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
         ) {
+          // everything but the buttons scrolls, so the water cups below the note can be reached with the keyboard open
+          Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
             Text(tr("Quick note") + " · $time", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent)
             Text(
                 tr("How are you right now?"),
@@ -191,12 +199,21 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus),
             )
+            if (water != null) {
+                Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(1.dp).background(Rule))
+                Text(
+                    tr("Water today"), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                WaterTracker(water, Repo.data.entries[today]?.values?.get(water.id), today, 0.dp)
+            }
+          }
             Row(
                 Modifier.fillMaxWidth().padding(top = 10.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LinkButton(tr("Cancel")) { onDone() }
+                LinkButton(tr("Close")) { close() }
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = { save() },

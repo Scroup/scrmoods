@@ -35,7 +35,7 @@ object SummaryLogic {
     /** A question in quotation marks, in the app's language. */
     private fun quoted(p: TrackingPoint) = tr("“{0}”", p.title.trimEnd(':'))
 
-    fun build(d: AppData, days: List<LocalDate>, periodLabel: String): List<SummaryPage> {
+    fun build(d: AppData, days: List<LocalDate>, periodLabel: String, today: LocalDate = days.lastOrNull() ?: LocalDate.now()): List<SummaryPage> {
         if (days.isEmpty()) return emptyList()
         val lastP = lastPeriod(periodLabel)
         val prevP = prevPeriod(periodLabel)
@@ -44,6 +44,9 @@ object SummaryLogic {
         fun vals(p: TrackingPoint, ds: List<LocalDate>) = ds.mapNotNull { v(p.id, it) }
         val active = d.points.filter { !it.archived && d.sections.firstOrNull { s -> s.id == it.sectionId }?.hidden != true }
         val pages = mutableListOf<SummaryPage>()
+
+        // 0. A gentle heads-up: things that have been off for about a week come first, like a pop-up.
+        headsUp(d, today)?.let { pages += it }
 
         // 1. Overview
         val logged = days.filter { d.entries.containsKey(it.toString()) }
@@ -172,34 +175,19 @@ object SummaryLogic {
             )
         }
 
-        // 7. Patterns: what tends to go together with a better or harder day
+        // 7. Patterns: which trackers go together with better or harder days (see Insights).
+        // Short periods borrow the last 30 days, since a week is too little to see a link.
         if (target != null) {
-            val found = mutableListOf<Pair<Float, String>>()
-            for (p in active.filter { it.type == PointType.YESNO && it.sectionId != Sections.BIPOLAR }) {
-                val yes = days.filter { v(p.id, it) == 1f }.mapNotNull { goodnessOn(it) }
-                val no = days.filter { v(p.id, it) == 0f }.mapNotNull { goodnessOn(it) }
-                if (yes.size < 3 || no.size < 3) continue
-                val diff = (yes.average() - no.average()).toFloat()
-                if (abs(diff) < 0.12f) continue
-                val q = quoted(p)
-                found += diff to if (diff > 0) tr("On days you answered yes to {0}, {1} was noticeably better.", q, targetName)
-                else tr("On days you answered yes to {0}, {1} tended to be lower.", q, targetName)
-            }
-            if (sleep != null) {
-                val long = days.filter { (v(sleep.id, it) ?: -1f) >= 7f }.mapNotNull { goodnessOn(it) }
-                val short = days.filter { (v(sleep.id, it) ?: 99f) < 7f }.mapNotNull { goodnessOn(it) }
-                if (long.size >= 3 && short.size >= 3) {
-                    val diff = (long.average() - short.average()).toFloat()
-                    if (abs(diff) >= 0.12f) found += diff to if (diff > 0) tr("After 7 or more hours of sleep, {0} was better.", targetName)
-                    else tr("Interestingly, {0} wasn't better after longer nights.", targetName)
-                }
-            }
-            waterLink(d, days, target, targetName)?.let { found += it }
-            val picked = found.sortedByDescending { abs(it.first) }.take(3)
-            if (picked.isNotEmpty()) {
+            val window = if (days.size >= 30) days else (29 downTo 0).map { days.last().minusDays(it.toLong()) }
+            val found = Insights.findings(d, window, max = 3)
+            if (found.isNotEmpty()) {
                 pages += SummaryPage(
                     tr("Patterns worth noticing"), tr("What goes with your better days"),
-                    picked.map { it.second } + tr("These are patterns in your answers, not proof of cause."),
+                    found.map { f -> f.sentence + (f.advice?.let { " $it" } ?: "") } +
+                        listOfNotNull(
+                            if (window !== days) tr("Based on your last 30 days.") else null,
+                            tr("These are patterns in your answers, not proof of cause."),
+                        ),
                     SummaryTone.MOOD,
                 )
             }
@@ -227,32 +215,16 @@ object SummaryLogic {
         return pages
     }
 
-    /**
-     * Whether days that reached the water goal went with a better outlook (or mood), as a sentence.
-     * Null when water isn't tracked, there's too little data, or there's no clear difference.
-     */
-    private fun waterLink(d: AppData, days: List<LocalDate>, target: TrackingPoint, targetName: String): Pair<Float, String>? {
-        val water = d.points.firstOrNull { it.id == Water.POINT && !it.archived } ?: return null
-        if (d.sections.firstOrNull { it.id == Sections.WATER }?.hidden == true) return null
-        fun v(pid: String, day: LocalDate) = d.entries[day.toString()]?.values?.get(pid)?.toFloatOrNull()
-        fun g(day: LocalDate) = v(target.id, day)?.let { target.goodness(it) }
-        val met = days.filter { (v(water.id, it) ?: -1f) >= water.max }.mapNotNull { g(it) }
-        val under = days.filter { v(water.id, it)?.let { c -> c < water.max } == true }.mapNotNull { g(it) }
-        if (met.size < 3 || under.size < 3) return null
-        val diff = (met.average() - under.average()).toFloat()
-        if (abs(diff) < 0.12f) return null
-        return diff to if (diff > 0) tr("On days you reached your water goal, {0} was better.", targetName)
-        else tr("On days you reached your water goal, {0} wasn't better.", targetName)
-    }
-
-    /** The water–mood sentence for the Water card in Trends. */
-    fun waterMoodLine(d: AppData, days: List<LocalDate>): String? {
-        fun has(p: TrackingPoint) = days.any { d.entries[it.toString()]?.values?.get(p.id)?.toFloatOrNull() != null }
-        val visible = d.points.filter { !it.archived && d.sections.firstOrNull { s -> s.id == it.sectionId }?.hidden != true }
-        val outlook = visible.firstOrNull { it.id == "outlook" && it.type == PointType.SCALE && has(it) }
-        val mood = visible.firstOrNull { it.id == MoodPoints.SCALE && has(it) }
-        val target = outlook ?: mood ?: return null
-        return waterLink(d, days, target, if (outlook != null) tr("your outlook") else tr("your mood"))?.second
+    /** The heads-up page, or null when nothing has been off this week. */
+    fun headsUp(d: AppData, today: LocalDate): SummaryPage? {
+        val alerts = Insights.alerts(d, today)
+        if (alerts.isEmpty()) return null
+        return SummaryPage(
+            tr("A gentle heads-up"),
+            if (alerts.size == 1) alerts[0].title else tr("{0} things to look after this week", alerts.size),
+            alerts.flatMap { a -> listOf(if (alerts.size > 1) tr("{0}: {1}", a.title, a.body) else a.body, a.advice) },
+            SummaryTone.CARE,
+        )
     }
 
     /** A sentence comparing this period's goodness with the one before, or null if there's too little data or no real change. */

@@ -90,11 +90,12 @@ fun SummaryDialog(pages: List<SummaryPage>, onClose: () -> Unit) {
                             fontSize = 32.sp, lineHeight = 39.sp, fontWeight = FontWeight.Medium, color = Ink,
                             modifier = Modifier.padding(top = 10.dp, bottom = 18.dp),
                         )
+                        val soft = setOf(tr("These are patterns in your answers, not proof of cause."), tr("Small steps count."), tr("Based on your last 30 days."))
                         for (line in p.body) {
                             Text(
                                 line,
-                                fontSize = 17.sp, lineHeight = 25.sp, color = if (line == tr("These are patterns in your answers, not proof of cause.") || line == tr("Small steps count.")) InkSoft else Ink,
-                                fontStyle = if (line == tr("These are patterns in your answers, not proof of cause.") || line == tr("Small steps count.")) FontStyle.Italic else FontStyle.Normal,
+                                fontSize = 17.sp, lineHeight = 25.sp, color = if (line in soft) InkSoft else Ink,
+                                fontStyle = if (line in soft) FontStyle.Italic else FontStyle.Normal,
                                 modifier = Modifier.padding(bottom = 10.dp),
                             )
                         }
