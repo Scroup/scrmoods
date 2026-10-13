@@ -135,6 +135,9 @@ fun DataScreen(onManage: () -> Unit) {
         SectionHeader(tr("Water"))
         WaterSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
 
+        SectionHeader(tr("Meals"))
+        MealsSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
+
         SectionHeader(tr("Little touches"))
         SettingSwitch(tr("Vibrate on tap"), tr("A soft click of vibration when you tap buttons and answers."), Haptics.enabled) {
             Haptics.setEnabled(context, it)

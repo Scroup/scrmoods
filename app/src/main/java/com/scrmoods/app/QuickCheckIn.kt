@@ -71,6 +71,7 @@ import kotlin.math.roundToInt
 private sealed class Step {
     class Point(val p: TrackingPoint, val section: String) : Step()
     class Mood(val section: String) : Step()
+    class Meals(val section: String) : Step()
     object Note : Step()
 }
 
@@ -83,6 +84,10 @@ private fun buildSteps(d: AppData): List<Step> {
             if (d.points.any { it.id == MoodPoints.SCALE }) steps += Step.Mood(s.name)
             continue
         }
+        if (s.id == Sections.MEALS) { // bowls and cookies on one page
+            if (mealsPoint(d) != null) steps += Step.Meals(s.name)
+            continue
+        }
         for (p in d.points) if (p.sectionId == s.id && !p.archived) steps += Step.Point(p, s.name)
     }
     steps += Step.Note
@@ -92,6 +97,7 @@ private fun buildSteps(d: AppData): List<Step> {
 private fun Step.answered(e: DayEntry): Boolean = when (this) {
     is Step.Point -> !e.values[p.id].isNullOrBlank()
     is Step.Mood -> !e.values[MoodPoints.SCALE].isNullOrBlank()
+    is Step.Meals -> !e.values[Meals.MEALS].isNullOrBlank()
     Step.Note -> e.note.isNotBlank()
 }
 
@@ -199,6 +205,13 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
                             Repo.setValue(date, s.p.id, v.ifBlank { null })
                             next()
                         }
+                    }
+                    is Step.Meals -> {
+                        Kicker(s.section)
+                        BigQuestion(tr("How did you eat today?"))
+                        val mp = mealsPoint(Repo.data)
+                        if (mp != null) MealsTracker(mp, snacksPoint(Repo.data), entry.values, date, 0.dp)
+                        NextButton(tr("Next"), Modifier.padding(top = 28.dp)) { next() }
                     }
                     Step.Note -> NoteStep(entry.note, finishedBefore = GoodNight.finished == date) { finish(it) }
                 }

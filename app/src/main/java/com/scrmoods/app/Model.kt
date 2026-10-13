@@ -79,6 +79,18 @@ object Sections {
     const val MEDS = "meds"
     const val BIPOLAR = "bipolar"
     const val WATER = "water"
+    const val MEALS = "meals"
+}
+
+/**
+ * The meal tracker: meals eaten today (the daily goal is kept as the point's maximum, like water)
+ * and snacks in between. Just to see that you eat enough to get through the day.
+ */
+object Meals {
+    const val MEALS = "meals_eaten"
+    const val SNACKS = "snacks_eaten"
+    const val DEFAULT_GOAL = 3
+    const val SNACK_SLOTS = 3
 }
 
 /**
@@ -113,6 +125,7 @@ object Defaults {
         Section(Sections.DAILY, "Daily Check-in"),
         Section(Sections.HEALTH, "Health and Self Care"),
         Section(Sections.WATER, "Water"),
+        Section(Sections.MEALS, "Meals"),
         Section(Sections.SOCIAL, "Mental and Social Stimulation"),
         Section(Sections.CUSTOM, "Custom tracking points"),
         Section(Sections.MEDS, "Medications/Supplements (check off those you took today)"),
@@ -149,6 +162,10 @@ object Defaults {
 
         TrackingPoint(Water.POINT, Sections.WATER, PointType.NUMBER, "Water",
             min = 0f, max = Water.DEFAULT_GOAL.toFloat(), step = 1f, unit = "cups", better = Better.HIGHER),
+        TrackingPoint(Meals.MEALS, Sections.MEALS, PointType.NUMBER, "Meals",
+            min = 0f, max = Meals.DEFAULT_GOAL.toFloat(), step = 1f, unit = "meals", better = Better.HIGHER),
+        TrackingPoint(Meals.SNACKS, Sections.MEALS, PointType.NUMBER, "Snacks",
+            min = 0f, max = Meals.SNACK_SLOTS.toFloat(), step = 1f, unit = "snacks", better = Better.NONE),
     )
 
     fun data() = AppData(sections, points, emptyMap())
@@ -202,7 +219,9 @@ fun ensureBuiltIns(d: AppData): AppData {
     for (id in listOf(MoodPoints.MIXED, MoodPoints.SCALE2, MoodPoints.SCALE)) { // added at the front, so the scale ends up first
         if (points.none { it.id == id }) points.add(0, Defaults.points.first { it.id == id })
     }
-    if (points.none { it.id == Water.POINT }) points.add(Defaults.points.first { it.id == Water.POINT })
+    for (id in listOf(Water.POINT, Meals.MEALS, Meals.SNACKS)) {
+        if (points.none { it.id == id }) points.add(Defaults.points.first { it.id == id })
+    }
     return d.copy(sections = sections, points = points)
 }
 

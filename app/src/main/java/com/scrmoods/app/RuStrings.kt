@@ -7,6 +7,8 @@ object RuStrings {
         "notes" to "заметку|заметки|заметок",
         "nights" to "ночь|ночи|ночей",
         "cups" to "стакан|стакана|стаканов",
+        "meals" to "приём пищи|приёма пищи|приёмов пищи",
+        "snacks" to "перекус|перекуса|перекусов",
     )
 
     val map: Map<String, String> = hashMapOf(
@@ -533,5 +535,29 @@ object RuStrings {
         "{0} wasn't fully taken on {1} {2} this week." to "«{0}» принято не полностью {1} {2} на этой неделе.",
         "{0} every dose on {1} of {2} days" to "{0}: все приёмы в {1} из {2} дн.",
         "doses" to "приём.",
+        "All your meals are in. Nicely done!" to "Все приёмы пищи на месте. Отлично!",
+        "Average {0} {1} and {2} {3} a day. All meals (dashed line) on {4} of {5} days." to "В среднем {0} {1} и {2} {3} в день. Все приёмы пищи (пунктир) — в {4} из {5} дн.",
+        "Food is fuel for your mood too: try not to skip meals, even something small counts, and a snack can bridge a long gap." to "Еда — топливо и для настроения: старайтесь не пропускать приёмы пищи, даже немного — уже хорошо, а перекус поможет пережить длинный перерыв.",
+        "How did you eat today?" to "Как вы сегодня питались?",
+        "In your own data, days with all your meals were better days." to "По вашим же записям, дни со всеми приёмами пищи были лучше.",
+        "Meal tracker" to "Трекер питания",
+        "Meals" to "Питание",
+        "Meals a day" to "Приёмов пищи в день",
+        "No meals logged in this period yet." to "За этот период питание пока не отмечено.",
+        "On days you ate all your meals, {0} was better ({1})." to "В дни, когда вы ели все приёмы пищи, {0} — лучше ({1}).",
+        "On days you ate all your meals, {0} was lower ({1})." to "В дни, когда вы ели все приёмы пищи, {0} — ниже ({1}).",
+        "Quick check-in opens at {0}:00. For now: water, meals and medications." to "Быстрая отметка откроется в {0}:00. А пока — вода, еда и лекарства.",
+        "Skipped meals" to "Пропущенные приёмы пищи",
+        "Skipped meals, harder days" to "Пропуски еды — тяжелее дни",
+        "Snacks" to "Перекусы",
+        "Tap a bowl after each meal and a cookie for each snack, to see that you eat enough to get through the day." to "Отмечайте миску после каждого приёма пищи и печенье за каждый перекус — чтобы видеть, что вы едите достаточно, чтобы хватало сил на день.",
+        "Tap a bowl after each meal." to "Отмечайте миску после каждого приёма пищи.",
+        "This week you ate about {0} a day against a goal of {1}." to "На этой неделе у вас было в среднем {0} в день при цели {1}.",
+        "Your days were harder than usual too." to "И дни были тяжелее обычного.",
+        "none yet" to "пока нет",
+        "meals" to "приём. пищи",
+        "snacks" to "перекус.",
+        "Meal {0}" to "Приём пищи {0}",
+        "Snack {0}" to "Перекус {0}",
     )
 }

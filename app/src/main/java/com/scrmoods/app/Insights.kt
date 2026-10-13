@@ -62,7 +62,7 @@ object Insights {
     /** Splits days into the tracker's "high" side and "low" side (yes/no, water goal, or above/below the median). */
     private fun isHigh(p: TrackingPoint, x: Float, median: Float, allAtTop: Boolean): Boolean = when {
         p.type == PointType.YESNO -> x >= 0.5f
-        p.id == Water.POINT || p.isPillMed -> x >= p.max // water goal reached / every dose taken
+        p.id == Water.POINT || p.id == Meals.MEALS || p.isPillMed -> x >= p.max // water goal reached / every dose taken
         allAtTop -> x >= median
         else -> x > median
     }
@@ -81,6 +81,9 @@ object Insights {
             p.id == Water.POINT ->
                 if (better) tr("On days you reached your water goal, {0} was better ({1}).", t.name, s)
                 else tr("On days you reached your water goal, {0} was lower ({1}).", t.name, s)
+            p.id == Meals.MEALS ->
+                if (better) tr("On days you ate all your meals, {0} was better ({1}).", t.name, s)
+                else tr("On days you ate all your meals, {0} was lower ({1}).", t.name, s)
             p.id == "sleep_hours" ->
                 if (better) tr("After longer nights, {0} was better ({1}).", t.name, s)
                 else tr("After longer nights, {0} was lower ({1}).", t.name, s)
@@ -114,7 +117,7 @@ object Insights {
             "friends_family" -> tr("Time with people you like seems to help.")
             "mindfulness" -> tr("A few minutes a day is enough.")
             "restful_sleep" -> tr("Protect your sleep: a calm evening routine helps.")
-            "nutrition" -> tr("Regular meals seem to help.")
+            "nutrition", Meals.MEALS -> tr("Regular meals seem to help.")
             "hygiene" -> tr("Small self-care steps matter.")
             "chores" -> tr("Small tasks done seem to lift the day.")
             "therapy" -> tr("Therapy days seem to help.")
@@ -198,6 +201,27 @@ object Insights {
             }
         }
 
+        // meals: fewer than your goal most of the week (with harder days, or well under the goal)
+        val meals = v.firstOrNull { it.id == Meals.MEALS }
+        if (meals != null) {
+            val ate = week.filter { it < today }.mapNotNull { value(d, meals.id, it) }
+            val under = ate.count { it < meals.max }
+            val avg = if (ate.isEmpty()) 0f else ate.average().toFloat()
+            if (ate.size >= 4 && under >= maxOf(4, ate.size - 1) && (harder || avg <= meals.max - 1.5f)) {
+                val linked = found.firstOrNull { it.point.id == Meals.MEALS && it.diff > 0 }
+                val goal = meals.max.toInt()
+                out += Alert(
+                    "meals_low", if (harder) tr("Skipped meals, harder days") else tr("Skipped meals"),
+                    tr(
+                        "This week you ate about {0} a day against a goal of {1}.",
+                        "${formatNumber(avg)} " + trp(Math.round(avg), "meal", "meals"), "$goal " + trp(goal, "meal", "meals"),
+                    ) + if (harder) " " + tr("Your days were harder than usual too.") else "",
+                    tr("Food is fuel for your mood too: try not to skip meals, even something small counts, and a snack can bridge a long gap.") +
+                        if (linked != null) " " + tr("In your own data, days with all your meals were better days.") else "",
+                )
+            }
+        }
+
         // sleep: short nights together with harder days
         val sleep = v.firstOrNull { it.id == "sleep_hours" }
         if (sleep != null && harder) {
@@ -227,7 +251,7 @@ object Insights {
         // your strongest other pattern, pointing the wrong way most of this week
         if (harder) {
             val strong = found.firstOrNull { f ->
-                abs(f.r) >= 0.45f && f.point.id != Water.POINT && f.point.id != "sleep_hours" && f.point.sectionId != Sections.MEDS
+                abs(f.r) >= 0.45f && f.point.id != Water.POINT && f.point.id != Meals.MEALS && f.point.id != "sleep_hours" && f.point.sectionId != Sections.MEDS
             }
             if (strong != null) {
                 val p = strong.point

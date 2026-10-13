@@ -169,7 +169,7 @@ fun CheckInScreen(
     }
     val daytime = date == LocalDate.now() && now.hour < EVENING_HOUR
     val sections = if (!daytime) data.sections else data.sections.sortedBy {
-        when (it.id) { Sections.WATER -> 0; Sections.MEDS -> 1; else -> 2 }
+        when (it.id) { Sections.WATER -> 0; Sections.MEALS -> 1; Sections.MEDS -> 2; else -> 3 }
     }
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
@@ -177,7 +177,7 @@ fun CheckInScreen(
         if (Themes.showQuote) Box(Modifier.reveal(1)) { QuoteOfTheDay(Quotes.forDate(date)) }
         if (daytime) {
             Text(
-                tr("Quick check-in opens at {0}:00. For now: water and medications.", EVENING_HOUR),
+                tr("Quick check-in opens at {0}:00. For now: water, meals and medications.", EVENING_HOUR),
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint,
                 modifier = Modifier.reveal(2).padding(start = 24.dp, end = 24.dp, top = 8.dp),
             )
@@ -195,6 +195,14 @@ fun CheckInScreen(
                 JournalCard(order = order++) {
                     SectionHeader(section.name, horizontal = Gutter, top = 16.dp)
                     WaterTracker(wp, entry.values[wp.id], key, Gutter)
+                }
+                continue
+            }
+            if (section.id == Sections.MEALS) {
+                val mp = mealsPoint(data) ?: continue
+                JournalCard(order = order++) {
+                    SectionHeader(section.name, horizontal = Gutter, top = 16.dp)
+                    MealsTracker(mp, snacksPoint(data), entry.values, key, Gutter)
                 }
                 continue
             }

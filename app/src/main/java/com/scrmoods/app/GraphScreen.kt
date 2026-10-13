@@ -130,6 +130,10 @@ fun GraphScreen() {
         val waterOn = data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false
         if (water != null && waterOn) TrendCard(tr("Water")) { WaterChart(water, days) }
 
+        val meals = mealsPoint(data)
+        val mealsOn = data.sections.firstOrNull { it.id == Sections.MEALS }?.hidden == false
+        if (meals != null && mealsOn) TrendCard(tr("Meals")) { MealsChart(meals, snacksPoint(data), days) }
+
         SectionHeader(tr("Any tracking point"))
         // The chosen tracking point is the heading; tap it to pick another.
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)) {
@@ -577,6 +581,73 @@ private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
         fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
     )
+}
+
+/** Meals a day as bars (full when every meal was eaten), snacks stacked on top in a lighter shade, the goal dashed. */
+@Composable
+private fun MealsChart(p: TrackingPoint, snacks: TrackingPoint?, days: List<LocalDate>) {
+    fun v(pid: String?, day: LocalDate) = pid?.let { Repo.data.entries[day.toString()]?.values?.get(it)?.toFloatOrNull() }
+    val meals = days.map { v(p.id, it) }
+    val snack = days.map { v(snacks?.id, it) }
+    val goal = p.goalMeals.toFloat()
+    val top = days.indices.maxOfOrNull { (meals[it] ?: 0f) + (snack[it] ?: 0f) } ?: 0f
+    val maxV = maxOf(goal + 1f, top).let { kotlin.math.ceil(it) }
+    val grid = listOf(maxV, 0f)
+    Row(Modifier.fillMaxWidth().height(150.dp).padding(end = 14.dp)) {
+        Column(
+            Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            for (g in grid) Text(formatNumber(g), fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+        }
+        Canvas(Modifier.weight(1f).fillMaxHeight()) {
+            val t = 8.dp.toPx(); val bottom = size.height - 8.dp.toPx(); val h = bottom - t
+            fun y(x: Float) = bottom - (x / maxV).coerceIn(0f, 1f) * h
+            grid.forEach { g -> drawLine(Rule, Offset(0f, y(g)), Offset(size.width, y(g)), strokeWidth = 1.dp.toPx()) }
+            val slot = size.width / days.size
+            val barW = (slot * 0.68f).coerceAtLeast(1.dp.toPx()).coerceAtMost(22.dp.toPx())
+            val r = androidx.compose.ui.geometry.CornerRadius(minOf(barW / 2, 3.dp.toPx()))
+            for (i in days.indices) {
+                val m = meals[i] ?: 0f
+                val s = snack[i] ?: 0f
+                if (m + s <= 0f) continue
+                val cx = slot * i + slot / 2
+                if (s > 0f) drawRoundRect(
+                    Accent.copy(alpha = 0.25f), Offset(cx - barW / 2, y(m + s)),
+                    androidx.compose.ui.geometry.Size(barW, y(m) - y(m + s) + r.x), cornerRadius = r,
+                )
+                if (m > 0f) drawRoundRect(
+                    Accent.copy(alpha = if (m >= goal) 0.85f else 0.45f), Offset(cx - barW / 2, y(m)),
+                    androidx.compose.ui.geometry.Size(barW, bottom - y(m)), cornerRadius = r,
+                )
+            }
+            drawLine(
+                Ink.copy(alpha = 0.6f), Offset(0f, y(goal)), Offset(size.width, y(goal)),
+                strokeWidth = 1.4.dp.toPx(),
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx())),
+            )
+        }
+    }
+    DateEnds(days)
+    val known = meals.filterNotNull()
+    val note = if (known.isEmpty()) tr("No meals logged in this period yet.") else {
+        val avg = known.average().toFloat()
+        val snacksAvg = snack.filterNotNull().takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: 0f
+        tr(
+            "Average {0} {1} and {2} {3} a day. All meals (dashed line) on {4} of {5} days.",
+            "%.1f".format(Locale.US, avg), trp(Math.round(avg), "meal", "meals"),
+            "%.1f".format(Locale.US, snacksAvg), trp(Math.round(snacksAvg), "snack", "snacks"),
+            known.count { it >= goal }, known.size,
+        )
+    }
+    Text(
+        note, fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
+    )
+    val window = if (days.size >= 30) days else (29 downTo 0).map { days.last().minusDays(it.toLong()) }
+    Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Meals.MEALS }?.let {
+        Text(it.sentence + (it.advice?.let { a -> " $a" } ?: ""), fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
+    }
 }
 
 /** Cups a day as bars, the goal as a dashed line; bars that reach the goal are drawn in full colour. */
