@@ -520,5 +520,18 @@ object RuStrings {
         "Open the summary" to "Открыть итоги",
         "Based on your last 30 days." to "По данным за последние 30 дней.",
         "Water today" to "Вода сегодня",
+        "+1 cup · {0} of {1}" to "+1 стакан · {0} из {1}",
+        "Add a cup of water" to "Добавить стакан воды",
+        "{0} of {1} taken" to "Принято {0} из {1}",
+        "Once a day" to "Раз в день",
+        "{0} times a day" to "Раз в день: {0}",
+        "How many times a day?" to "Сколько раз в день?",
+        "A pill for each time. Tap them through the day as you take them." to "По таблетке на каждый приём. Отмечайте их в течение дня, когда принимаете.",
+        "Dose {0}" to "Приём {0}",
+        "On days you took every dose of {0}, {1} was better ({2})." to "В дни, когда вы приняли {0} все разы, {1} — лучше ({2}).",
+        "On days you took every dose of {0}, {1} was lower ({2})." to "В дни, когда вы приняли {0} все разы, {1} — ниже ({2}).",
+        "{0} wasn't fully taken on {1} {2} this week." to "«{0}» принято не полностью {1} {2} на этой неделе.",
+        "{0} every dose on {1} of {2} days" to "{0}: все приёмы в {1} из {2} дн.",
+        "doses" to "приём.",
     )
 }

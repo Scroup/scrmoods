@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget: tap to write a quick note into today's journal. Colours are set from the app's theme in code. -->
+<!-- Home-screen widget: tap to write a quick note into today's journal; the drop on the right adds a cup of water
+     without opening anything. Colours are set from the app's theme in code. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -70,6 +71,55 @@
                 android:textColor="#8A6B63"
                 android:textSize="13sp"
                 android:textStyle="italic" />
+        </LinearLayout>
+
+        <!-- +1 cup of water, right from the home screen -->
+        <LinearLayout
+            android:id="@+id/widget_water"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:id="@+id/widget_water_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#A0594F"
+                android:textSize="14sp" />
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp">
+
+                <ImageView
+                    android:id="@+id/widget_water_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_water_drop"
+                    android:layout_width="20dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_drop" />
+
+                <ImageView
+                    android:id="@+id/widget_water_plus"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="3dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_plus" />
+            </FrameLayout>
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

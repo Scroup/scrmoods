@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -153,12 +154,14 @@ fun ManageScreen(
 
 private fun sectionTitle(id: String) = Repo.data.sections.firstOrNull { it.id == id }?.name ?: id
 
-private fun typeSummary(p: TrackingPoint): String = when (p.type) {
+private fun typeSummary(p: TrackingPoint): String = if (p.isPillMed) timesADay(p.doses) else when (p.type) {
     PointType.SCALE -> p.options.joinToString(" · ") { tr(it) }
     PointType.YESNO -> tr("No") + " · " + tr("Yes")
     PointType.NUMBER -> tr("Number {0}–{1}", formatNumber(p.min), formatNumber(p.max)) + if (p.unit.isNotBlank()) " ${tr(p.unit)}" else ""
     PointType.TEXT -> tr("Text")
 }
+
+private fun timesADay(n: Int) = if (n == 1) tr("Once a day") else tr("{0} times a day", n)
 
 @Composable
 private fun SmallIcon(
@@ -198,8 +201,11 @@ fun PointEditorDialog(
     var error by remember { mutableStateOf<String?>(null) }
     var reminders by remember { mutableStateOf(existing?.reminders ?: emptyList()) }
     var better by remember { mutableStateOf(existing?.better ?: Better.HIGHER) }
+    var doses by remember { mutableStateOf(existing?.takeIf { it.isPillMed }?.doses ?: 1) }
     val context = LocalContext.current
     val isMed = sectionId == Sections.MEDS
+    // medications are set up by how many times a day they're taken (a pill for each), not by answer type
+    val pillMode = isMed && (existing == null || existing.isPillMed)
 
     fun build(): TrackingPoint? {
         if (label.isBlank()) { error = tr("Please enter a question or name."); return null }
@@ -212,6 +218,13 @@ fun PointEditorDialog(
         val st = step.replace(',', '.').toFloatOrNull()
         if (type == PointType.NUMBER && (mn == null || mx == null || st == null || mx <= mn || st <= 0f)) {
             error = tr("Check the numbers: maximum must be above minimum and step above 0."); return null
+        }
+        if (pillMode) {
+            val base = existing ?: TrackingPoint(id = Repo.newId("med"), sectionId = Sections.MEDS, type = PointType.YESNO, label = "")
+            return base.copy(
+                label = if (existing != null && label.trim() == existing.title) existing.label else label.trim(),
+                sectionId = Sections.MEDS, options = emptyList(), reminders = reminders.distinct().sorted(),
+            ).withDoses(doses)
         }
         val base = existing ?: TrackingPoint(
             id = Repo.newId(if (isMed) "med" else "custom"),
@@ -257,9 +270,27 @@ fun PointEditorDialog(
                     RadioRow(s.name, sectionId == s.id) { sectionId = s.id }
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(tr("Answer type"), fontSize = 14.sp, color = TextGray)
-                if (existing == null) {
+                if (pillMode) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(tr("How many times a day?"), fontSize = 14.sp, color = TextGray)
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(timesADay(doses), fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Accent, modifier = Modifier.weight(1f))
+                        RoundButton(enabled = doses > 1, onClick = { Haptics.tap(); doses-- }) { Text("−", fontSize = 22.sp, color = Ink) }
+                        Spacer(Modifier.width(8.dp))
+                        RoundButton(enabled = doses < 12, onClick = { Haptics.tap(); doses++ }) { Text("+", fontSize = 22.sp, color = Ink) }
+                    }
+                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        repeat(doses) { Pill(true, Modifier.size(26.dp)) }
+                    }
+                    Text(
+                        tr("A pill for each time. Tap them through the day as you take them."),
+                        fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 17.sp, modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                if (!pillMode) Spacer(Modifier.height(8.dp))
+                if (!pillMode) Text(tr("Answer type"), fontSize = 14.sp, color = TextGray)
+                if (pillMode) {
+                } else if (existing == null) {
                     for (t in PointType.entries) RadioRow(tr(t.title), type == t) { type = t; error = null }
                 } else {
                     Text(
@@ -268,7 +299,7 @@ fun PointEditorDialog(
                     )
                 }
 
-                if (type == PointType.SCALE) {
+                if (type == PointType.SCALE && !pillMode) {
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = options,
@@ -283,7 +314,7 @@ fun PointEditorDialog(
                         fontSize = 12.sp, color = InkSoft,
                     )
                 }
-                if (type == PointType.NUMBER) {
+                if (type == PointType.NUMBER && !pillMode) {
                     Spacer(Modifier.height(8.dp))
                     Row {
                         NumField(tr("Min"), min, Modifier.weight(1f)) { min = it; error = null }
@@ -301,7 +332,7 @@ fun PointEditorDialog(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
                 }
-                if (type != PointType.TEXT) {
+                if (type != PointType.TEXT && !pillMode) {
                     Spacer(Modifier.height(12.dp))
                     Text(tr("Which is better?"), fontSize = 14.sp, color = TextGray)
                     val labels = when (type) {
@@ -317,7 +348,7 @@ fun PointEditorDialog(
                         fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 17.sp,
                     )
                 }
-                if (type == PointType.YESNO) {
+                if (type == PointType.YESNO || pillMode) {
                     Spacer(Modifier.height(14.dp))
                     Text(tr("Remind me"), fontSize = 14.sp, color = TextGray)
                     Text(

@@ -75,7 +75,7 @@ fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: andr
             RoundButton(onClick = { set(drunk + 1) }) { Text("+", fontSize = 22.sp, color = Ink) }
         }
 
-        // the cups, all in one row: they shrink to fit when there are many
+        // the drops (one per cup), all in one row: they shrink to fit when there are many
         val count = maxOf(goal, drunk)
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (i in 0 until count) {
@@ -94,7 +94,7 @@ fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: andr
                             pop.fire(stars = n > drunk, color = Accent)
                             set(n)
                         },
-                ) { Cup(full, extra = i >= goal) }
+                ) { Drop(full, extra = i >= goal) }
             }
         }
         Text(
@@ -110,36 +110,38 @@ fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: andr
 }
 
 /**
- * One little glass with rounded bottom corners, drawn on a 28 × 34 grid (the web app uses the same shape).
- * When drunk: wavy water in the accent colour and a small shine. Cups past the goal are a little lighter.
+ * One little water drop with a happy face, drawn on a 28 × 34 grid (the web app and the widget use the same shape).
+ * Empty: just the outline. Drunk: filled with the accent colour, with a shine. Drops past the goal are a little lighter.
  */
 @Composable
-private fun Cup(full: Boolean, extra: Boolean) {
+private fun Drop(full: Boolean, extra: Boolean) {
     val accent = Accent
+    val face = OnAccent
     val line = if (full) Accent else InkFaint
     Canvas(Modifier.fillMaxSize()) {
         val sx = size.width / 28f
         val sy = size.height / 34f
-        fun Path.m(x: Float, y: Float) = moveTo(x * sx, y * sy)
-        fun Path.l(x: Float, y: Float) = lineTo(x * sx, y * sy)
-        fun Path.q(cx: Float, cy: Float, x: Float, y: Float) = quadraticTo(cx * sx, cy * sy, x * sx, y * sy)
+        fun o(x: Float, y: Float) = Offset(x * sx, y * sy)
+        val drop = Path().apply {
+            moveTo(14f * sx, 2f * sy)
+            cubicTo(17f * sx, 7f * sy, 24f * sx, 14f * sy, 24f * sx, 22f * sy)
+            cubicTo(24f * sx, 27.5f * sy, 19.5f * sx, 32f * sy, 14f * sx, 32f * sy)
+            cubicTo(8.5f * sx, 32f * sy, 4f * sx, 27.5f * sy, 4f * sx, 22f * sy)
+            cubicTo(4f * sx, 14f * sy, 11f * sx, 7f * sy, 14f * sx, 2f * sy)
+            close()
+        }
         if (full) {
-            val water = Path().apply {
-                m(4.75f, 10f)
-                q(7f, 8.8f, 9.4f, 10f); q(11.8f, 11.2f, 14f, 10f); q(16.4f, 8.8f, 18.6f, 10f); q(20.9f, 11.2f, 23.25f, 10f)
-                l(21.32f, 28f); q(21f, 31f, 18f, 31f); l(10f, 31f); q(7f, 31f, 6.68f, 28f)
-                close()
-            }
-            drawPath(water, accent.copy(alpha = if (extra) 0.45f else 0.78f))
-            drawLine(
-                Color.White.copy(alpha = 0.65f), Offset(8.2f * sx, 14f * sy), Offset(8.9f * sx, 21f * sy),
-                strokeWidth = 1.6f * sx, cap = StrokeCap.Round,
-            )
+            drawPath(drop, accent.copy(alpha = if (extra) 0.5f else 0.85f))
+            // shine
+            val shine = Path().apply { moveTo(8.2f * sx, 17f * sy); quadraticTo(8.6f * sx, 13.5f * sy, 10.8f * sx, 10.8f * sy) }
+            drawPath(shine, face.copy(alpha = 0.75f), style = Stroke(width = 1.6f * sx, cap = StrokeCap.Round))
+            // a little face
+            drawCircle(face.copy(alpha = 0.9f), radius = 1.15f * sx, center = o(11f, 22.5f))
+            drawCircle(face.copy(alpha = 0.9f), radius = 1.15f * sx, center = o(17f, 22.5f))
+            val smile = Path().apply { moveTo(11.8f * sx, 25.6f * sy); quadraticTo(14f * sx, 27.8f * sy, 16.2f * sx, 25.6f * sy) }
+            drawPath(smile, face.copy(alpha = 0.9f), style = Stroke(width = 1.3f * sx, cap = StrokeCap.Round))
         }
-        val glass = Path().apply {
-            m(4f, 3f); l(6.68f, 28f); q(7f, 31f, 10f, 31f); l(18f, 31f); q(21f, 31f, 21.32f, 28f); l(24f, 3f)
-        }
-        drawPath(glass, line, style = Stroke(width = 1.7f * sx, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(drop, line, style = Stroke(width = 1.7f * sx, join = StrokeJoin.Round))
     }
 }
 

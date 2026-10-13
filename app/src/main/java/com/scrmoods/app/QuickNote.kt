@@ -7,6 +7,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.View
 import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -63,16 +66,49 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-/** Home-screen widget: one tap opens the quick note window. It takes the colours of the app's theme. */
+/**
+ * Home-screen widget: one tap opens the quick note window; the drop on the right adds a cup of water
+ * straight away, without opening anything. It takes the colours of the app's theme.
+ */
 class QuickNoteWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         manager.updateAppWidget(ids, views(context))
     }
 
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION_ADD_WATER) return super.onReceive(context, intent)
+        val app = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                Repo.init(app)
+                Lang.init(app)
+                Haptics.init(app)
+                val p = waterPoint(Repo.data)
+                if (p != null) {
+                    val today = LocalDate.now().toString()
+                    val n = (Repo.data.entries[today]?.values?.get(p.id)?.toFloatOrNull()?.toInt() ?: 0) + 1
+                    Repo.setValue(today, p.id, n.toString())
+                    Repo.flush()
+                    refresh(app)
+                    Haptics.tap()
+                    val msg = if (n == p.goalCups) tr("Goal reached. Well done!")
+                    else tr("+1 cup · {0} of {1}", n, p.goalCups)
+                    Handler(Looper.getMainLooper()).post { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
+                }
+            } finally {
+                pending.finish()
+            }
+        }.start()
+    }
+
     companion object {
+        const val ACTION_ADD_WATER = "com.scrmoods.app.ADD_WATER"
+
         private fun views(context: Context): RemoteViews {
             Themes.init(context)
             Lang.init(context)
+            Repo.init(context)
             val pal = Themes.current
             val open = PendingIntent.getActivity(
                 context, 0,
@@ -89,6 +125,26 @@ class QuickNoteWidget : AppWidgetProvider() {
                 setTextViewText(R.id.widget_title, tr("Quick note"))
                 setTextViewText(R.id.widget_sub, tr("How are you right now?"))
                 setOnClickPendingIntent(R.id.widget_root, open)
+
+                // the water drop: shown while the water tracker is on
+                val water = waterPoint(Repo.data)
+                val waterOn = water != null && Repo.data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false
+                setViewVisibility(R.id.widget_water, if (waterOn) View.VISIBLE else View.GONE)
+                if (water != null && waterOn) {
+                    val drunk = Repo.data.entries[LocalDate.now().toString()]?.values?.get(water.id)?.toFloatOrNull()?.toInt() ?: 0
+                    setTextViewText(R.id.widget_water_count, "$drunk/${water.goalCups}")
+                    setTextColor(R.id.widget_water_count, pal.accent.toArgb())
+                    setInt(R.id.widget_water_dot, "setColorFilter", pal.accentWash.toArgb())
+                    setInt(R.id.widget_water_drop, "setColorFilter", pal.accent.toArgb())
+                    setInt(R.id.widget_water_plus, "setColorFilter", pal.onAccent.toArgb())
+                    setContentDescription(R.id.widget_water, tr("Add a cup of water"))
+                    val add = PendingIntent.getBroadcast(
+                        context, 1,
+                        Intent(context, QuickNoteWidget::class.java).setAction(ACTION_ADD_WATER),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                    setOnClickPendingIntent(R.id.widget_water, add)
+                }
             }
         }
 

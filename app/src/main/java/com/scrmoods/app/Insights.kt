@@ -62,7 +62,7 @@ object Insights {
     /** Splits days into the tracker's "high" side and "low" side (yes/no, water goal, or above/below the median). */
     private fun isHigh(p: TrackingPoint, x: Float, median: Float, allAtTop: Boolean): Boolean = when {
         p.type == PointType.YESNO -> x >= 0.5f
-        p.id == Water.POINT -> x >= p.max
+        p.id == Water.POINT || p.isPillMed -> x >= p.max // water goal reached / every dose taken
         allAtTop -> x >= median
         else -> x > median
     }
@@ -84,6 +84,9 @@ object Insights {
             p.id == "sleep_hours" ->
                 if (better) tr("After longer nights, {0} was better ({1}).", t.name, s)
                 else tr("After longer nights, {0} was lower ({1}).", t.name, s)
+            p.isPillMed && p.type == PointType.NUMBER ->
+                if (better) tr("On days you took every dose of {0}, {1} was better ({2}).", quoted(p), t.name, s)
+                else tr("On days you took every dose of {0}, {1} was lower ({2}).", quoted(p), t.name, s)
             p.type == PointType.YESNO ->
                 if (better) tr("On days you answered yes to {0}, {1} was better ({2}).", quoted(p), t.name, s)
                 else tr("On days you answered yes to {0}, {1} was lower ({2}).", quoted(p), t.name, s)
@@ -208,13 +211,16 @@ object Insights {
             }
         }
 
-        // medications marked as not taken
-        val missed = v.filter { it.sectionId == Sections.MEDS && it.type == PointType.YESNO }
-            .map { p -> p to week.count { value(d, p.id, it) == 0f } }
-            .filter { it.second >= 3 }
+        // medications not (fully) taken: on finished days you checked in, since you started logging the medication
+        val missed = v.filter { it.isPillMed }.map { p ->
+            val first = d.entries.keys.filter { d.entries[it]?.values?.containsKey(p.id) == true }.minOrNull()
+            p to week.filter { day ->
+                day < today && first != null && day.toString() >= first && d.entries[day.toString()]?.values?.isNotEmpty() == true
+            }.count { day -> ((value(d, p.id, day) ?: 0f).toInt()) < p.doses }
+        }.filter { it.second >= 3 }
         if (missed.isNotEmpty()) out += Alert(
             "meds_missed", tr("Missed medications"),
-            missed.joinToString(" ") { (p, n) -> tr("{0} was marked as not taken on {1} {2} this week.", p.title, n, trp(n, "day", "days")) },
+            missed.joinToString(" ") { (p, n) -> tr("{0} wasn't fully taken on {1} {2} this week.", p.title, n, trp(n, "day", "days")) },
             tr("If it's hard to keep up, reminders can help, and so can talking to your doctor."),
         )
 

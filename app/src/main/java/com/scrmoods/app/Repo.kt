@@ -86,10 +86,14 @@ object Repo {
     }
 
     /** value = null clears the answer. */
-    fun setValue(date: String, pointId: String, value: String?) = updateEntry(date) { e ->
-        val v = e.values.toMutableMap()
-        if (value == null || value.isEmpty()) v.remove(pointId) else v[pointId] = value
-        e.copy(values = v)
+    fun setValue(date: String, pointId: String, value: String?) {
+        updateEntry(date) { e ->
+            val v = e.values.toMutableMap()
+            if (value == null || value.isEmpty()) v.remove(pointId) else v[pointId] = value
+            e.copy(values = v)
+        }
+        // the home-screen widget shows today's cups
+        if (pointId == Water.POINT) appContext?.let { QuickNoteWidget.refresh(it) }
     }
 
     fun setNote(date: String, note: String) = updateEntry(date) { it.copy(note = note.trim()) }
@@ -116,7 +120,17 @@ object Repo {
     }
 
     fun editPoint(p: TrackingPoint) {
-        update { d -> d.copy(points = d.points.map { if (it.id == p.id) p else it }) }
+        update { d ->
+            val old = d.points.firstOrNull { it.id == p.id }
+            // a medication's doses a day changed: keep "all taken" meaning all taken
+            val entries = if (old != null && old.isPillMed && p.isPillMed && old.doses != p.doses) {
+                d.entries.mapValues { (_, e) ->
+                    e.values[p.id]?.let { v -> e.copy(values = e.values + (p.id to remapDose(v, old.doses, p.doses))) } ?: e
+                }
+            } else d.entries
+            d.copy(points = d.points.map { if (it.id == p.id) p else it }, entries = entries)
+        }
+        if (p.id == Water.POINT) appContext?.let { QuickNoteWidget.refresh(it) }
         pointsChanged()
     }
 
@@ -151,8 +165,9 @@ object Repo {
         d.copy(points = list)
     }
 
-    fun setSectionHidden(id: String, hidden: Boolean) = update { d ->
-        d.copy(sections = d.sections.map { if (it.id == id) it.copy(hidden = hidden) else it })
+    fun setSectionHidden(id: String, hidden: Boolean) {
+        update { d -> d.copy(sections = d.sections.map { if (it.id == id) it.copy(hidden = hidden) else it }) }
+        if (id == Sections.WATER) appContext?.let { QuickNoteWidget.refresh(it) }
     }
 
     fun newId(prefix: String) = prefix + "_" + System.currentTimeMillis().toString(36)

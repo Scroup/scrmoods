@@ -205,3 +205,33 @@ fun ensureBuiltIns(d: AppData): AppData {
     if (points.none { it.id == Water.POINT }) points.add(Defaults.points.first { it.id == Water.POINT })
     return d.copy(sections = sections, points = points)
 }
+
+/*
+ * Medications can be taken several times a day (e.g. magnesium with each meal).
+ * Once a day: a yes/no point ("1" taken, "0" not). Several times: a number point from 0 to the doses a day,
+ * holding how many were taken. Both show as a row of little pills to tap.
+ */
+
+/** A medication shown as pills (yes/no or a dose count in the medications section). */
+val TrackingPoint.isPillMed: Boolean
+    get() = sectionId == Sections.MEDS && (type == PointType.YESNO || type == PointType.NUMBER)
+
+/** How many times a day it's taken. */
+val TrackingPoint.doses: Int get() = if (type == PointType.NUMBER) max.toInt().coerceIn(1, 12) else 1
+
+/** How many doses a stored answer means. */
+fun dosesTaken(value: String?): Int = value?.replace(',', '.')?.toFloatOrNull()?.toInt()?.coerceAtLeast(0) ?: 0
+
+/** The same medication taken [n] times a day. */
+fun TrackingPoint.withDoses(n: Int): TrackingPoint =
+    if (n <= 1) copy(type = PointType.YESNO, min = 0f, max = 10f, step = 1f, unit = "", better = Better.HIGHER)
+    else copy(type = PointType.NUMBER, min = 0f, max = n.toFloat(), step = 1f, unit = "doses", better = Better.HIGHER)
+
+/** The stored answer for [taken] doses out of [doses]. */
+fun doseValue(taken: Int, doses: Int): String = if (doses <= 1) (if (taken >= 1) "1" else "0") else taken.coerceIn(0, doses).toString()
+
+/** Keeps old answers meaning the same when the doses a day change: "all taken" stays all taken. */
+fun remapDose(value: String, from: Int, to: Int): String {
+    val taken = dosesTaken(value)
+    return if (taken >= from) doseValue(to, to) else doseValue(minOf(taken, to - 1).coerceAtLeast(0), to)
+}

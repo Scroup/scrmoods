@@ -247,6 +247,8 @@ fun CheckInScreen(
 
 @Composable
 fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (String?) -> Unit) {
+    // medications: a little pill for each dose of the day
+    if (p.isPillMed) { MedRow(p, value, Gutter, onChange); return }
     when (p.type) {
         // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
         PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
@@ -283,7 +285,7 @@ private val QuestionSize = 15.5.sp
 private val QuestionLine = 21.sp
 
 @Composable
-private fun Question(label: String, modifier: Modifier) {
+internal fun Question(label: String, modifier: Modifier = Modifier) {
     Text(label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = modifier)
 }
 

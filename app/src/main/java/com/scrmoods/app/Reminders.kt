@@ -186,11 +186,14 @@ class ReminderReceiver : BroadcastReceiver() {
                         // Daily alarms set up their own next day; snoozes don't.
                         if (!snoozed) Reminders.scheduleAll(context)
                         val stillWanted = p != null && !p.archived && time in p.reminders
-                        val alreadyTaken = Repo.data.entries[today]?.values?.get(pointId) == "1"
+                        val alreadyTaken = p != null && dosesTaken(Repo.data.entries[today]?.values?.get(pointId)) >= p.doses
                         if (stillWanted && !alreadyTaken) Reminders.show(context, p!!, time)
                     }
                     Reminders.ACTION_TAKEN -> {
-                        Repo.setValue(today, pointId, "1")
+                        // one more dose taken (a once-a-day medication simply becomes "taken")
+                        val n = p?.doses ?: 1
+                        val had = dosesTaken(Repo.data.entries[today]?.values?.get(pointId))
+                        Repo.setValue(today, pointId, doseValue(minOf(had + 1, n), n))
                         Repo.flush()
                         Reminders.dismiss(context, pointId, time)
                     }

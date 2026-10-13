@@ -184,7 +184,9 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
                         if (entry.values[MoodPoints.MIXED] != "1") Repo.setValue(date, MoodPoints.SCALE2, null)
                         if (!advancing) { advancing = true; scope.launch { delay(900); next() } }
                     }
-                    is Step.Point -> when (s.p.type) {
+                    is Step.Point -> if (s.p.isPillMed && s.p.type == PointType.NUMBER) {
+                        MedStep(s, entry.values[s.p.id], onChange = { Repo.setValue(date, s.p.id, it) }) { next() }
+                    } else when (s.p.type) {
                         PointType.SCALE, PointType.YESNO -> ChoiceStep(s, entry.values[s.p.id]) { v ->
                             Repo.setValue(date, s.p.id, v)
                             answeredThenNext()
@@ -363,6 +365,22 @@ private fun NumberStep(s: Step.Point, date: String, value: String?, onDone: (Str
         RoundButton(onClick = { v = snap(v + step) }) { Text("+", fontSize = 22.sp, color = Ink) }
     }
     NextButton(tr("Next"), Modifier.padding(top = 28.dp)) { onDone(formatNumber(v)) }
+}
+
+/** A medication taken several times a day: a big pill for each dose, then Next. */
+@Composable
+private fun MedStep(s: Step.Point, value: String?, onChange: (String) -> Unit, onNext: () -> Unit) {
+    Kicker(s.section)
+    BigQuestion(s.p.title)
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        PillRow(s.p, value, if (s.p.doses > 4) 46.dp else 60.dp, spacing = 8.dp, onChange = onChange)
+    }
+    Text(
+        tr("{0} of {1} taken", dosesTaken(value).coerceAtMost(s.p.doses), s.p.doses),
+        fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkSoft, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+    )
+    NextButton(tr("Next"), Modifier.padding(top = 28.dp)) { if (value == null) onChange(doseValue(0, s.p.doses)); onNext() }
 }
 
 @Composable

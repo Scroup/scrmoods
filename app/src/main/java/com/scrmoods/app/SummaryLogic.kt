@@ -156,7 +156,8 @@ object SummaryLogic {
             val cur = vals(p, days)
             if (cur.size < 2) null else Triple(p, cur, p.goodness(cur.average().toFloat()) ?: return@mapNotNull null)
         }
-        fun describe(p: TrackingPoint, cur: List<Float>): String = when (p.type) {
+        fun describe(p: TrackingPoint, cur: List<Float>): String = if (p.isPillMed && p.type == PointType.NUMBER)
+            tr("{0} every dose on {1} of {2} days", quoted(p), cur.count { it >= p.max }, cur.size) else when (p.type) {
             PointType.YESNO -> tr("{0} Yes on {1} of {2} days", quoted(p), cur.count { it >= 0.5f }, cur.size)
             PointType.SCALE -> tr("{0} mostly {1}", quoted(p), p.options.getOrNull(cur.average().roundToInt())?.let { tr(it).lowercase() } ?: "")
             else -> tr("{0} {1} on average", quoted(p), "%.1f".format(Locale.US, cur.average()) + if (p.unit.isNotBlank()) " " + tr(p.unit) else "")

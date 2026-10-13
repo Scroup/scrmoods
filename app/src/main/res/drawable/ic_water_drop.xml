@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A water drop (same shape as the drops in the app). Tinted in code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp" android:height="34dp" android:viewportWidth="28" android:viewportHeight="34">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M14,2C17,7 24,14 24,22C24,27.5 19.5,32 14,32C8.5,32 4,27.5 4,22C4,14 11,7 14,2Z" />
+</vector>
