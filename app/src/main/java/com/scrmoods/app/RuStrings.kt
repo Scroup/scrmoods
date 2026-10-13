@@ -6,6 +6,7 @@ object RuStrings {
         "days" to "день|дня|дней",
         "notes" to "заметку|заметки|заметок",
         "nights" to "ночь|ночи|ночей",
+        "cups" to "стакан|стакана|стаканов",
     )
 
     val map: Map<String, String> = hashMapOf(
@@ -445,5 +446,26 @@ object RuStrings {
         "Delete note?" to "Удалить заметку?",
         "Saved data could not be read; a copy was kept. Starting fresh." to "Не удалось прочитать сохранённые данные; копия сохранена. Начинаем с чистого листа.",
         "Could not save! Storage may be full: export your data." to "Не удалось сохранить! Возможно, память заполнена: сохраните свои данные.",
+        "Water" to "Вода",
+        "cups" to "стак.",
+        "Water tracker" to "Трекер воды",
+        "Tap a cup for every glass (200 ml) you drink. During the day it sits at the top of the journal." to "Отмечайте каждый выпитый стакан (200 мл). Днём трекер стоит вверху дневника.",
+        "Daily goal" to "Норма в день",
+        "Your weight, kg" to "Ваш вес, кг",
+        "Suggested: about {0} {1} ({2} L) a day." to "Рекомендуется: около {0} {1} ({2} л) в день.",
+        "Use {0} {1} as my goal" to "Сделать нормой {0} {1}",
+        "A rule of thumb: about 30 ml per kg of body weight, counting all drinks. Heat and exercise mean more. If you take lithium or have heart or kidney problems, ask your doctor how much is right for you." to "Примерное правило: около 30 мл на кг веса в день, считая все напитки. В жару и при нагрузке нужно больше. Если вы принимаете литий или есть проблемы с сердцем или почками, спросите врача, сколько вам пить.",
+        "{0} L" to "{0} л",
+        "{0} L of {1} L" to "{0} л из {1} л",
+        "Cup {0}" to "Стакан {0}",
+        "Goal reached. Well done!" to "Норма выполнена. Отлично!",
+        "Tap a cup each time you drink a glass (200 ml)." to "Нажимайте на стакан каждый раз, когда выпиваете стакан воды (200 мл).",
+        "{0} more to go." to "Осталось {0}.",
+        "Quick check-in opens at {0}:00. For now: water and medications." to "Быстрая отметка откроется в {0}:00. А пока — вода и лекарства.",
+        "No water logged in this period yet." to "За этот период вода пока не отмечена.",
+        "Average {0} {1} ({2} L) a day. Goal (dashed line) reached on {3} of {4} days." to "В среднем {0} {1} ({2} л) в день. Норма (пунктир) выполнена в {3} из {4} дн.",
+        "On days you reached your water goal, {0} was better." to "В дни, когда вы выпивали норму воды, {0} — лучше.",
+        "On days you reached your water goal, {0} wasn't better." to "В дни, когда вы выпивали норму воды, {0} — не лучше.",
+        "Little touches" to "Приятные мелочи",
     )
 }

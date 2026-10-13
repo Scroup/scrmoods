@@ -194,6 +194,7 @@ object SummaryLogic {
                     else tr("Interestingly, {0} wasn't better after longer nights.", targetName)
                 }
             }
+            waterLink(d, days, target, targetName)?.let { found += it }
             val picked = found.sortedByDescending { abs(it.first) }.take(3)
             if (picked.isNotEmpty()) {
                 pages += SummaryPage(
@@ -224,6 +225,34 @@ object SummaryLogic {
             SummaryTone.NEUTRAL,
         )
         return pages
+    }
+
+    /**
+     * Whether days that reached the water goal went with a better outlook (or mood), as a sentence.
+     * Null when water isn't tracked, there's too little data, or there's no clear difference.
+     */
+    private fun waterLink(d: AppData, days: List<LocalDate>, target: TrackingPoint, targetName: String): Pair<Float, String>? {
+        val water = d.points.firstOrNull { it.id == Water.POINT && !it.archived } ?: return null
+        if (d.sections.firstOrNull { it.id == Sections.WATER }?.hidden == true) return null
+        fun v(pid: String, day: LocalDate) = d.entries[day.toString()]?.values?.get(pid)?.toFloatOrNull()
+        fun g(day: LocalDate) = v(target.id, day)?.let { target.goodness(it) }
+        val met = days.filter { (v(water.id, it) ?: -1f) >= water.max }.mapNotNull { g(it) }
+        val under = days.filter { v(water.id, it)?.let { c -> c < water.max } == true }.mapNotNull { g(it) }
+        if (met.size < 3 || under.size < 3) return null
+        val diff = (met.average() - under.average()).toFloat()
+        if (abs(diff) < 0.12f) return null
+        return diff to if (diff > 0) tr("On days you reached your water goal, {0} was better.", targetName)
+        else tr("On days you reached your water goal, {0} wasn't better.", targetName)
+    }
+
+    /** The water–mood sentence for the Water card in Trends. */
+    fun waterMoodLine(d: AppData, days: List<LocalDate>): String? {
+        fun has(p: TrackingPoint) = days.any { d.entries[it.toString()]?.values?.get(p.id)?.toFloatOrNull() != null }
+        val visible = d.points.filter { !it.archived && d.sections.firstOrNull { s -> s.id == it.sectionId }?.hidden != true }
+        val outlook = visible.firstOrNull { it.id == "outlook" && it.type == PointType.SCALE && has(it) }
+        val mood = visible.firstOrNull { it.id == MoodPoints.SCALE && has(it) }
+        val target = outlook ?: mood ?: return null
+        return waterLink(d, days, target, if (outlook != null) tr("your outlook") else tr("your mood"))?.second
     }
 
     /** A sentence comparing this period's goodness with the one before, or null if there's too little data or no real change. */

@@ -125,6 +125,10 @@ fun GraphScreen() {
         val sleep = data.points.firstOrNull { it.id == "sleep_hours" && !it.archived }
         if (sleep != null) TrendCard(tr("Sleep pattern")) { SleepChart(sleep, days) }
 
+        val water = waterPoint(data)
+        val waterOn = data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false
+        if (water != null && waterOn) TrendCard(tr("Water")) { WaterChart(water, days) }
+
         SectionHeader(tr("Any tracking point"))
         // The chosen tracking point is the heading; tap it to pick another.
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)) {
@@ -572,4 +576,62 @@ private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
         fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
     )
+}
+
+/** Cups a day as bars, the goal as a dashed line; bars that reach the goal are drawn in full colour. */
+@Composable
+private fun WaterChart(p: TrackingPoint, days: List<LocalDate>) {
+    val vals = days.map { Repo.data.entries[it.toString()]?.values?.get(p.id)?.toFloatOrNull() }
+    val known = vals.filterNotNull()
+    val goal = p.goalCups.toFloat()
+    val maxV = maxOf(goal + 2f, (known.maxOrNull() ?: 0f)).let { kotlin.math.ceil(it / 2f) * 2f }
+    val grid = listOf(maxV, maxV / 2, 0f)
+
+    Row(Modifier.fillMaxWidth().height(170.dp).padding(end = 14.dp)) {
+        Column(
+            Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            for (g in grid) Text(formatNumber(g) + " " + trp(g.toInt(), "cup", "cups"), fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+        }
+        Canvas(Modifier.weight(1f).fillMaxHeight()) {
+            val top = 8.dp.toPx(); val bottom = size.height - 8.dp.toPx(); val h = bottom - top
+            fun y(v: Float) = bottom - (v / maxV).coerceIn(0f, 1f) * h
+            grid.forEach { g -> drawLine(Rule, Offset(0f, y(g)), Offset(size.width, y(g)), strokeWidth = 1.dp.toPx()) }
+            val n = days.size
+            val slot = size.width / n
+            val barW = (slot * 0.68f).coerceAtLeast(1.dp.toPx()).coerceAtMost(22.dp.toPx())
+            vals.forEachIndexed { i, v ->
+                if (v == null || v <= 0f) return@forEachIndexed
+                val cx = slot * i + slot / 2
+                drawRoundRect(
+                    Accent.copy(alpha = if (v >= goal) 0.85f else 0.4f),
+                    Offset(cx - barW / 2, y(v)),
+                    androidx.compose.ui.geometry.Size(barW, bottom - y(v)),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(minOf(barW / 2, 3.dp.toPx())),
+                )
+            }
+            drawLine(
+                Ink.copy(alpha = 0.6f), Offset(0f, y(goal)), Offset(size.width, y(goal)),
+                strokeWidth = 1.4.dp.toPx(),
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 5.dp.toPx())),
+            )
+        }
+    }
+    DateEnds(days)
+    val note = if (known.isEmpty()) tr("No water logged in this period yet.") else {
+        val avg = known.average().toFloat()
+        val reached = known.count { it >= goal }
+        tr(
+            "Average {0} {1} ({2} L) a day. Goal (dashed line) reached on {3} of {4} days.",
+            "%.1f".format(Locale.US, avg), trp(Math.round(avg), "cup", "cups"), Water.litres(avg), reached, known.size,
+        )
+    }
+    Text(
+        note, fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
+        modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
+    )
+    SummaryLogic.waterMoodLine(Repo.data, days)?.let {
+        Text(it, fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
+    }
 }

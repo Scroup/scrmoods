@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -121,6 +122,9 @@ private fun QuoteOfTheDay(q: Quote) {
     }
 }
 
+/** From this hour the journal switches to its evening layout (quick check-in, usual order). */
+const val EVENING_HOUR = 20
+
 /** Space between a journal page's edge and its content. */
 private val Gutter = 14.dp
 
@@ -158,14 +162,40 @@ fun CheckInScreen(
     val entry = data.entries[key] ?: DayEntry(key)
     val context = LocalContext.current
 
+    // During the day (today, before 20:00) water and medications come first for quick logging,
+    // and the quick check-in waits for the evening. Checked every minute so it switches over by itself.
+    val now by produceState(LocalTime.now()) {
+        while (true) { delay(60_000); value = LocalTime.now() }
+    }
+    val daytime = date == LocalDate.now() && now.hour < EVENING_HOUR
+    val sections = if (!daytime) data.sections else data.sections.sortedBy {
+        when (it.id) { Sections.WATER -> 0; Sections.MEDS -> 1; else -> 2 }
+    }
+
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         Box(Modifier.reveal(0)) { JournalDateHeader(date, onDateChange) }
         if (Themes.showQuote) Box(Modifier.reveal(1)) { QuoteOfTheDay(Quotes.forDate(date)) }
-        QuickCheckInButton(Modifier.reveal(2), onClick = onQuick)
+        if (daytime) {
+            Text(
+                tr("Quick check-in opens at {0}:00. For now: water and medications.", EVENING_HOUR),
+                fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint,
+                modifier = Modifier.reveal(2).padding(start = 24.dp, end = 24.dp, top = 8.dp),
+            )
+        } else {
+            QuickCheckInButton(Modifier.reveal(2), onClick = onQuick)
+        }
         var order = 3 // cards rise in one after another when the app opens
 
-        for (section in data.sections) {
+        for (section in sections) {
             if (section.hidden) continue
+            if (section.id == Sections.WATER) {
+                val wp = waterPoint(data) ?: continue
+                JournalCard(order = order++) {
+                    SectionHeader(section.name, horizontal = Gutter, top = 16.dp)
+                    WaterTracker(wp, entry.values[wp.id], key, Gutter)
+                }
+                continue
+            }
             if (section.id == Sections.BIPOLAR) {
                 JournalCard(order = order++) {
                     SectionHeader(section.name, horizontal = Gutter, top = 16.dp)

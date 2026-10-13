@@ -78,6 +78,22 @@ object Sections {
     const val CUSTOM = "custom"
     const val MEDS = "meds"
     const val BIPOLAR = "bipolar"
+    const val WATER = "water"
+}
+
+/**
+ * The water tracker: cups of 200 ml drunk today. The daily goal (in cups) is kept as the point's maximum,
+ * so it travels with the data file and Trends can tell how close each day came to it.
+ */
+object Water {
+    const val POINT = "water_cups"
+    const val ML_PER_CUP = 200
+    const val DEFAULT_GOAL = 8
+
+    /** A common rule of thumb: about 30 ml per kg of body weight a day, in whole cups. */
+    fun recommendedCups(weightKg: Float): Int = Math.round(weightKg * 30f / ML_PER_CUP).coerceIn(4, 20)
+
+    fun litres(cups: Float): String = String.format(java.util.Locale.US, "%.1f", cups * ML_PER_CUP / 1000f)
 }
 
 /** Ids of the mood scale (0 severe depression, 5 balanced, 10 mania) and its "mixed features" flag. */
@@ -96,6 +112,7 @@ object Defaults {
         Section(Sections.BIPOLAR, "Mood scale"),
         Section(Sections.DAILY, "Daily Check-in"),
         Section(Sections.HEALTH, "Health and Self Care"),
+        Section(Sections.WATER, "Water"),
         Section(Sections.SOCIAL, "Mental and Social Stimulation"),
         Section(Sections.CUSTOM, "Custom tracking points"),
         Section(Sections.MEDS, "Medications/Supplements (check off those you took today)"),
@@ -129,6 +146,9 @@ object Defaults {
         TrackingPoint("chores", Sections.SOCIAL, PointType.YESNO, "Did you accomplish any household chores or tasks?", better = Better.HIGHER),
         TrackingPoint("news_media", Sections.SOCIAL, PointType.SCALE, "News and media exposure:", level, better = Better.LOWER),
         TrackingPoint("social_media", Sections.SOCIAL, PointType.SCALE, "Social media exposure:", level, better = Better.LOWER),
+
+        TrackingPoint(Water.POINT, Sections.WATER, PointType.NUMBER, "Water",
+            min = 0f, max = Water.DEFAULT_GOAL.toFloat(), step = 1f, unit = "cups", better = Better.HIGHER),
     )
 
     fun data() = AppData(sections, points, emptyMap())
@@ -170,7 +190,7 @@ fun defaultBetter(id: String, type: PointType): Better =
         ?: if (type == PointType.YESNO) Better.HIGHER else Better.NONE
 
 /**
- * Makes sure built-in sections exist (in their usual order) and that the mood scale points exist,
+ * Makes sure built-in sections exist (in their usual order) and that the mood scale and water points exist,
  * so files saved by older versions get the new features.
  */
 fun ensureBuiltIns(d: AppData): AppData {
@@ -182,5 +202,6 @@ fun ensureBuiltIns(d: AppData): AppData {
     for (id in listOf(MoodPoints.MIXED, MoodPoints.SCALE2, MoodPoints.SCALE)) { // added at the front, so the scale ends up first
         if (points.none { it.id == id }) points.add(0, Defaults.points.first { it.id == id })
     }
+    if (points.none { it.id == Water.POINT }) points.add(Defaults.points.first { it.id == Water.POINT })
     return d.copy(sections = sections, points = points)
 }

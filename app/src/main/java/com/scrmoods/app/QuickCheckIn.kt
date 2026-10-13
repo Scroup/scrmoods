@@ -326,12 +326,15 @@ private fun MoodStep(section: String, value: Int?, onPick: (Int) -> Unit) {
 /** A number, e.g. hours of sleep: a big value with − / + and a slider, then Next. */
 @Composable
 private fun NumberStep(s: Step.Point, date: String, value: String?, onDone: (String) -> Unit) {
-    val p = s.p
+    val isWater = s.p.id == Water.POINT
+    // water can go past the goal, so its slider reaches further
+    val p = if (isWater) s.p.copy(max = maxOf(s.p.max * 2f, 12f)) else s.p
     val step = if (p.step > 0f) p.step else 1f
     fun snap(f: Float): Float = (p.min + ((f - p.min) / step).roundToInt() * step).coerceIn(p.min, p.max)
     // start from today's answer, else yesterday's, else the middle of the range
     val start = remember(p.id, date) {
         value?.toFloatOrNull()
+            ?: (if (isWater) 0f else null)
             ?: runCatching { Repo.entry(LocalDate.parse(date).minusDays(1).toString()).values[p.id]?.toFloatOrNull() }.getOrNull()
             ?: snap((p.min + p.max) / 2f)
     }

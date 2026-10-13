@@ -75,7 +75,7 @@ fun ManageScreen(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp), fontStyle = FontStyle.Italic, lineHeight = 21.sp,
             )
             for (section in data.sections) {
-                if (section.id == Sections.BIPOLAR) continue // switched on/off in Settings
+                if (section.id == Sections.BIPOLAR || section.id == Sections.WATER) continue // switched on/off in Settings
                 val points = data.points.filter { it.sectionId == section.id && !it.archived }
                 SectionHeader(section.name)
                 points.forEachIndexed { i, p ->
@@ -103,7 +103,7 @@ fun ManageScreen(
                 ) { onAdd(section.id) }
             }
 
-            val removed = data.points.filter { it.archived && it.sectionId != Sections.BIPOLAR }
+            val removed = data.points.filter { it.archived && it.sectionId != Sections.BIPOLAR && it.sectionId != Sections.WATER }
             if (removed.isNotEmpty()) {
                 SectionHeader(tr("Removed tracking points"))
                 Text(
@@ -181,7 +181,7 @@ fun PointEditorDialog(
     onDismiss: () -> Unit,
     onSave: (TrackingPoint) -> Unit,
 ) {
-    val sections = Repo.data.sections.filter { it.id != Sections.BIPOLAR }
+    val sections = Repo.data.sections.filter { it.id != Sections.BIPOLAR && it.id != Sections.WATER }
     // built-in questions show in the app's language; left unchanged, they keep their original wording
     var label by remember { mutableStateOf(existing?.title ?: "") }
     var sectionId by remember { mutableStateOf(existing?.sectionId ?: defaultSection) }
