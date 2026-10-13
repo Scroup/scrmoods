@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
         Themes.init(applicationContext)
+        Lang.init(applicationContext)
         GoodNight.init(applicationContext)
         Haptics.init(applicationContext)
         Sparkles.init(applicationContext)
@@ -116,7 +117,7 @@ fun App() {
     // Asked the first time you set a reminder (Android 13+ needs permission to show notifications).
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) Toast.makeText(
-            context, "Notifications are off, so reminders can't appear. You can turn them on in Settings → Apps → scrmoods.",
+            context, tr("Notifications are off, so reminders can't appear. You can turn them on in Settings → Apps → scrmoods."),
             Toast.LENGTH_LONG,
         ).show()
     }
@@ -124,7 +125,7 @@ fun App() {
         if (Build.VERSION.SDK_INT >= 33 && !Reminders.canNotify(context)) {
             notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else if (!Reminders.canNotify(context)) {
-            Toast.makeText(context, "Notifications are off for scrmoods. Turn them on in Settings to get reminders.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, tr("Notifications are off for scrmoods. Turn them on in Settings to get reminders."), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -149,8 +150,8 @@ fun App() {
                         NavigationBarItem(
                             selected = tab == t,
                             onClick = { Haptics.tap(); tab = t },
-                            icon = { Icon(t.icon(), t.label) },
-                            label = { Text(t.label, fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
+                            icon = { Icon(t.icon(), tr(t.label)) },
+                            label = { Text(tr(t.label), fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Accent,
                                 selectedTextColor = Accent,
@@ -208,9 +209,9 @@ fun App() {
         AlertDialog(
             onDismissRequest = { Repo.loadError = null },
             containerColor = Page,
-            title = { Text("Problem loading data") },
+            title = { Text(tr("Problem loading data")) },
             text = { Text(msg) },
-            confirmButton = { TextButton(onClick = { Repo.loadError = null }) { Text("OK") } },
+            confirmButton = { TextButton(onClick = { Repo.loadError = null }) { Text(tr("OK")) } },
         )
     }
 }

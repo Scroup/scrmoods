@@ -130,7 +130,7 @@ object GoodNight {
 
     fun wishFor(date: String): String {
         val day = runCatching { LocalDate.parse(date).toEpochDay() }.getOrDefault(0L)
-        return wishes[Math.floorMod(day, wishes.size.toLong()).toInt()]
+        return tr(wishes[Math.floorMod(day, wishes.size.toLong()).toInt()])
     }
 }
 
@@ -323,13 +323,13 @@ fun GoodNightOverlay() {
         ) {
             Text("☾", fontSize = 42.sp, color = Accent)
             Text(
-                "Good night",
+                tr("Good night"),
                 fontSize = 34.sp, fontWeight = FontWeight.Medium, color = Ink,
                 modifier = Modifier.padding(top = 4.dp),
             )
             val complete = GoodNight.isComplete(Repo.data, Repo.data.entries[date] ?: DayEntry(date))
             Text(
-                if (complete) "Today's journal is complete." else "Today is saved.",
+                if (complete) tr("Today's journal is complete.") else tr("Today is saved."),
                 fontSize = 15.sp, fontStyle = FontStyle.Italic, color = Accent,
                 modifier = Modifier.padding(top = 6.dp),
             )
@@ -340,7 +340,7 @@ fun GoodNightOverlay() {
             )
             EncouragementLine(date)
             Text(
-                "Tap anywhere to close",
+                tr("Tap anywhere to close"),
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint,
                 modifier = Modifier.padding(top = 18.dp),
             )
@@ -355,9 +355,8 @@ fun GoodNightOverlay() {
 @Composable
 private fun EncouragementLine(date: String) {
     val days = Repo.data.entries.values.count { !it.isEmpty }
-    val line = "You've filled in your journal on $days ${if (days == 1) "day" else "days"}. " +
-        "Keep it up, you're doing great."
-    var shown by remember(date) { mutableIntStateOf(0) }
+    val line = tr("You've filled in your journal on {0} {1}. Keep it up, you're doing great.", days, trp(days, "day", "days"))
+    var shown by remember(date, line) { mutableIntStateOf(0) }
     LaunchedEffect(date) {
         kotlinx.coroutines.delay(2600)
         for (i in 1..line.length) {

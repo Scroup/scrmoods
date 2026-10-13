@@ -58,7 +58,8 @@ object MoodScale {
         else -> Color(0xFFC6645A)
     }
 
-    fun level(v: Int) = levels[v.coerceIn(0, 10)]
+    /** The level for a number, in the app's language. */
+    fun level(v: Int) = levels[v.coerceIn(0, 10)].let { Level(tr(it.name), tr(it.description)) }
 }
 
 /** The mood scale card at the top of the journal. On mixed days two numbers can be picked. */
@@ -87,7 +88,7 @@ fun MoodScaleCard(
 
     Column(Modifier.fillMaxWidth().padding(horizontal = gutter)) {
         Text(
-            if (isMixed) "Pick two numbers: how low and how high you feel" else "Where is your mood today?",
+            if (isMixed) tr("Pick two numbers: how low and how high you feel") else tr("Where is your mood today?"),
             fontSize = 15.5.sp, lineHeight = 21.sp, color = Ink,
             modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
         )
@@ -106,7 +107,7 @@ fun MoodScaleCard(
             if (shown.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "Tap a number below: 0 is severe depression, 5 balanced, 10 mania.",
+                        tr("Tap a number below: 0 is severe depression, 5 balanced, 10 mania."),
                         fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 19.sp,
                         textAlign = TextAlign.Center,
                     )
@@ -162,16 +163,16 @@ fun MoodScaleCard(
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            Text("Depression", fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
-            Text("Balanced", fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            Text("Mania", fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+            Text(tr("Depression"), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
+            Text(tr("Balanced"), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(tr("Mania"), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
         }
 
         // Mixed features: depressive and high symptoms at the same time
         Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             val mixedPop = rememberPop()
             Text(
-                if (isMixed) "✓ Mixed features" else "Mixed features",
+                if (isMixed) "✓ " + tr("Mixed features") else tr("Mixed features"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -190,7 +191,7 @@ fun MoodScaleCard(
                     .padding(horizontal = 14.dp, vertical = 7.dp),
             )
             Text(
-                if (isMixed) "pick a low and a high number" else "low and high at the same time",
+                if (isMixed) tr("pick a low and a high number") else tr("low and high at the same time"),
                 fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, lineHeight = 16.sp,
                 modifier = Modifier.weight(1f).padding(start = 10.dp),
             )
@@ -199,8 +200,8 @@ fun MoodScaleCard(
         // A gentle word at the extremes
         val values = listOfNotNull(a, b)
         val support = when {
-            values.any { it <= 1 } -> "If you're thinking about suicide, please reach out now: call a crisis line or emergency services, or tell someone you trust. You don't have to carry this alone."
-            values.any { it >= 9 } -> "This is a lot. Consider contacting your doctor or someone you trust today."
+            values.any { it <= 1 } -> tr("If you're thinking about suicide, please reach out now: call a crisis line or emergency services, or tell someone you trust. You don't have to carry this alone.")
+            values.any { it >= 9 } -> tr("This is a lot. Consider contacting your doctor or someone you trust today.")
             else -> null
         }
         if (support != null) {

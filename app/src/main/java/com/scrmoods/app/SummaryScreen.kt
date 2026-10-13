@@ -73,8 +73,8 @@ fun SummaryDialog(pages: List<SummaryPage>, onClose: () -> Unit) {
                     }
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("scrmoods summary", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Close summary", tint = InkSoft) }
+                    Text(tr("scrmoods summary"), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, tr("Close summary"), tint = InkSoft) }
                 }
 
                 Crossfade(
@@ -93,8 +93,8 @@ fun SummaryDialog(pages: List<SummaryPage>, onClose: () -> Unit) {
                         for (line in p.body) {
                             Text(
                                 line,
-                                fontSize = 17.sp, lineHeight = 25.sp, color = if (line.startsWith("These are patterns") || line == "Small steps count.") InkSoft else Ink,
-                                fontStyle = if (line.startsWith("These are patterns") || line == "Small steps count.") FontStyle.Italic else FontStyle.Normal,
+                                fontSize = 17.sp, lineHeight = 25.sp, color = if (line == tr("These are patterns in your answers, not proof of cause.") || line == tr("Small steps count.")) InkSoft else Ink,
+                                fontStyle = if (line == tr("These are patterns in your answers, not proof of cause.") || line == tr("Small steps count.")) FontStyle.Italic else FontStyle.Normal,
                                 modifier = Modifier.padding(bottom = 10.dp),
                             )
                         }
@@ -102,7 +102,7 @@ fun SummaryDialog(pages: List<SummaryPage>, onClose: () -> Unit) {
                 }
 
                 Text(
-                    if (index < pages.size - 1) "Tap to continue" else "Tap to close",
+                    if (index < pages.size - 1) tr("Tap to continue") else tr("Tap to close"),
                     fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
@@ -125,8 +125,8 @@ fun SummaryButton(periodLabel: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Summary", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = OnAccent)
-            Text("How your last $periodLabel went, in words", fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = OnAccent.copy(alpha = 0.85f))
+            Text(tr("Summary"), fontSize = 18.sp, fontWeight = FontWeight.Medium, color = OnAccent)
+            Text(tr("How your last {0} went, in words", SummaryLogic.lastPeriod(periodLabel)), fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = OnAccent.copy(alpha = 0.85f))
         }
         Box(Modifier.size(34.dp).clip(RoundedCornerShape(50)).background(OnAccent.copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
             Text("✦", fontSize = 16.sp, color = OnAccent)

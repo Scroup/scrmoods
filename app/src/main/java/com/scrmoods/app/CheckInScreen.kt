@@ -61,8 +61,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val weekdayFmt = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault())
-private val longDateFmt = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault())
 
 /** The day as a journal page heading: a large weekday, the date in italic, and arrows to turn the page. */
 @Composable
@@ -74,17 +72,17 @@ fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                date.format(weekdayFmt).replaceFirstChar { it.uppercase() },
+                date.format(DateTimeFormatter.ofPattern("EEEE", Lang.locale)).replaceFirstChar { it.uppercase() },
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = (-0.3).sp,
                 color = Ink,
                 lineHeight = 38.sp,
             )
-            Text(date.format(longDateFmt), fontSize = 15.5.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+            Text(date.format(DateTimeFormatter.ofPattern("d MMMM yyyy", Lang.locale)), fontSize = 15.5.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             if (date != today) {
                 Text(
-                    "Back to today",
+                    tr("Back to today"),
                     fontSize = 15.sp,
                     fontStyle = FontStyle.Italic,
                     color = Accent,
@@ -98,10 +96,10 @@ fun JournalDateHeader(date: LocalDate, onDateChange: (LocalDate) -> Unit) {
         }
         Row(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RoundButton(onClick = { onDateChange(date.minusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous day", tint = Ink)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, tr("Previous day"), tint = Ink)
             }
             RoundButton(enabled = date < today, onClick = { onDateChange(date.plusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next day", tint = if (date < today) Ink else Rule)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, tr("Next day"), tint = if (date < today) Ink else Rule)
             }
         }
     }
@@ -113,9 +111,9 @@ private fun QuoteOfTheDay(q: Quote) {
     Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 24.dp, top = 10.dp, bottom = 4.dp)) {
         Text("“", fontSize = 46.sp, lineHeight = 46.sp, color = Accent.copy(alpha = 0.55f), modifier = Modifier.width(26.dp))
         Column(Modifier.padding(top = 6.dp)) {
-            Text(q.text, fontSize = 16.sp, lineHeight = 23.sp, fontStyle = FontStyle.Italic, color = Ink)
+            Text(tr(q.text), fontSize = 16.sp, lineHeight = 23.sp, fontStyle = FontStyle.Italic, color = Ink)
             Text(
-                q.author ?: "A reminder for today",
+                q.author?.let { tr(it) } ?: tr("A reminder for today"),
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, color = Accent,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -170,7 +168,7 @@ fun CheckInScreen(
             if (section.hidden) continue
             if (section.id == Sections.BIPOLAR) {
                 JournalCard(order = order++) {
-                    SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
+                    SectionHeader(section.name, horizontal = Gutter, top = 16.dp)
                     MoodScaleCard(
                         value = entry.values[MoodPoints.SCALE],
                         value2 = entry.values[MoodPoints.SCALE2],
@@ -189,25 +187,25 @@ fun CheckInScreen(
             val alwaysShown = section.id == Sections.CUSTOM || section.id == Sections.MEDS
             if (points.isEmpty() && !alwaysShown) continue
             JournalCard(order = order++) {
-                SectionHeader(section.title, horizontal = Gutter, top = 16.dp)
+                SectionHeader(section.name, horizontal = Gutter, top = 16.dp)
                 points.forEachIndexed { i, p ->
                     if (i > 0) QuestionDivider()
                     PointInput(p, entry.values[p.id], key) { v -> Repo.setValue(key, p.id, v) }
                 }
                 when (section.id) {
-                    Sections.CUSTOM -> LinkButton("+ Add custom tracking point", Modifier.padding(start = Gutter - 12.dp, top = 6.dp)) {
+                    Sections.CUSTOM -> LinkButton(tr("+ Add custom tracking point"), Modifier.padding(start = Gutter - 12.dp, top = 6.dp)) {
                         onAddPoint(Sections.CUSTOM)
                     }
                     Sections.MEDS -> Row(Modifier.padding(start = Gutter - 12.dp, top = 6.dp)) {
-                        LinkButton("+ Add medication") { onAddPoint(Sections.MEDS) }
-                        LinkButton("Edit medications") { onManage() }
+                        LinkButton(tr("+ Add medication")) { onAddPoint(Sections.MEDS) }
+                        LinkButton(tr("Edit medications")) { onManage() }
                     }
                 }
             }
         }
 
         JournalCard(bottomPadding = 4.dp, order = order) {
-            SectionHeader("Today's note", horizontal = Gutter, top = 16.dp)
+            SectionHeader(tr("Today's note"), horizontal = Gutter, top = 16.dp)
             RuledNote(key, entry.note, onFinish = if (GoodNight.enabled) ({ GoodNight.celebrate(context, key) }) else null)
         }
 
@@ -220,16 +218,16 @@ fun PointInput(p: TrackingPoint, value: String?, dateKey: String, onChange: (Str
     when (p.type) {
         // Answer rows reach 4dp past the question text on each side, for more room in the buttons.
         PointType.SCALE -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter - 4.dp)) {
-            Question(p.label, Modifier.padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 10.dp))
+            Question(p.title, Modifier.padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 10.dp))
             Segmented(p.options, value?.toIntOrNull(), { onChange(it?.toString()) }, playful = true)
         }
 
-        PointType.YESNO -> YesNoRow(p.label, value, onChange, Reminders.describe(p.reminders))
+        PointType.YESNO -> YesNoRow(p.title, value, onChange, Reminders.describe(p.reminders))
 
         PointType.NUMBER -> NumberInput(p, value, dateKey, onChange)
 
         PointType.TEXT -> Column(Modifier.fillMaxWidth().padding(horizontal = Gutter)) {
-            Question(p.label, Modifier.padding(top = 16.dp, bottom = 10.dp))
+            Question(p.title, Modifier.padding(top = 16.dp, bottom = 10.dp))
             // Typing is saved shortly after you stop, not on every key press.
             var text by remember(dateKey, p.id) { mutableStateOf(value ?: "") }
             LaunchedEffect(dateKey, text) {
@@ -300,15 +298,15 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
 
     Column(Modifier.fillMaxWidth().padding(horizontal = Gutter).padding(top = 16.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(p.label, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = Modifier.weight(1f).padding(bottom = 3.dp))
+            Text(p.title, fontSize = QuestionSize, lineHeight = QuestionLine, color = Ink, modifier = Modifier.weight(1f).padding(bottom = 3.dp))
             if (hasValue) {
                 Text(formatNumber(sliderValue), fontSize = 21.sp, fontWeight = FontWeight.Medium, color = Accent)
                 if (p.unit.isNotBlank()) Text(
-                    " " + p.unit, fontSize = 14.5.sp, fontStyle = FontStyle.Italic, color = InkSoft,
+                    " " + tr(p.unit), fontSize = 14.5.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                     modifier = Modifier.padding(bottom = 3.dp),
                 )
             } else {
-                Text("not set", fontSize = 14.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(bottom = 3.dp))
+                Text(tr("not set"), fontSize = 14.5.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -337,7 +335,7 @@ private fun NumberInput(p: TrackingPoint, value: String?, dateKey: String, onCha
         }
         if (stored != null) {
             Text(
-                "Clear",
+                tr("Clear"),
                 fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                 modifier = Modifier
                     .align(Alignment.End)
@@ -413,7 +411,7 @@ private fun RuledNote(dateKey: String, saved: String, onFinish: (() -> Unit)? = 
         decorationBox = { inner ->
             Box {
                 if (draft.text.isEmpty()) Text(
-                    "Write about your day…",
+                    tr("Write about your day…"),
                     style = TextStyle(fontFamily = Lora, fontSize = 15.5.sp, lineHeight = lineHeight, fontStyle = FontStyle.Italic, color = InkFaint),
                 )
                 inner()
@@ -446,7 +444,7 @@ private fun FinishDayButton(done: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            if (done) "Day finished  ✓" else "Finish the day  ☾",
+            if (done) tr("Day finished") + "  ✓" else tr("Finish the day") + "  ☾",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             fontStyle = if (done) FontStyle.Italic else FontStyle.Normal,

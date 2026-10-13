@@ -35,7 +35,7 @@ object Repo {
             } catch (e: Exception) {
                 // Keep a copy of the unreadable file instead of overwriting it.
                 file.copyTo(File(context.filesDir, "scrmoods-unreadable-${System.currentTimeMillis()}.xml"), overwrite = true)
-                loadError = "Could not read saved data (${e.message}). A copy was kept; starting fresh."
+                loadError = tr("Could not read saved data ({0}). A copy was kept; starting fresh.", e.message)
                 data = Defaults.data()
             }
         } else {

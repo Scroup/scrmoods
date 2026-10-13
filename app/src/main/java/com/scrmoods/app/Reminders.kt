@@ -108,8 +108,8 @@ object Reminders {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return
-        val ch = NotificationChannel(CHANNEL_ID, "Medication reminders", NotificationManager.IMPORTANCE_HIGH)
-        ch.description = "Reminders to take your medications and supplements"
+        val ch = NotificationChannel(CHANNEL_ID, tr("Medication reminders"), NotificationManager.IMPORTANCE_HIGH)
+        ch.description = tr("Reminders to take your medications and supplements")
         nm.createNotificationChannel(ch)
     }
 
@@ -141,15 +141,15 @@ object Reminders {
         val n = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFFA0594F.toInt())
-            .setContentTitle("Time to take your medication")
-            .setContentText(p.label)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(p.label))
+            .setContentTitle(tr("Time to take your medication"))
+            .setContentText(p.title)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(p.title))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(open)
             .setAutoCancel(true)
-            .addAction(0, "Taken", action(ACTION_TAKEN))
-            .addAction(0, "Snooze $SNOOZE_MINUTES min", action(ACTION_SNOOZE))
+            .addAction(0, tr("Taken"), action(ACTION_TAKEN))
+            .addAction(0, tr("Snooze {0} min", SNOOZE_MINUTES), action(ACTION_SNOOZE))
             .build()
         try {
             NotificationManagerCompat.from(context).notify(id, n)
@@ -164,8 +164,8 @@ object Reminders {
     /** "Reminder at 08:00" / "Reminders at 08:00 and 21:00" */
     fun describe(times: List<String>): String = when (times.size) {
         0 -> ""
-        1 -> "Reminder at ${times[0]}"
-        else -> "Reminders at " + times.dropLast(1).joinToString(", ") + " and " + times.last()
+        1 -> tr("Reminder at {0}", times[0])
+        else -> tr("Reminders at {0} and {1}", times.dropLast(1).joinToString(", "), times.last())
     }
 }
 
@@ -177,6 +177,7 @@ class ReminderReceiver : BroadcastReceiver() {
         Thread {
             try {
                 Repo.init(context.applicationContext)
+                Lang.init(context.applicationContext)
                 val today = LocalDate.now().toString()
                 val p = Repo.data.points.firstOrNull { it.id == pointId }
                 when (intent.action) {
@@ -212,6 +213,7 @@ class BootReceiver : BroadcastReceiver() {
         Thread {
             try {
                 Repo.init(context.applicationContext)
+                Lang.init(context.applicationContext)
                 Reminders.scheduleAll(context)
             } finally {
                 pending.finish()

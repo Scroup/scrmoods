@@ -69,7 +69,8 @@ class QuickNoteWidget : AppWidgetProvider() {
     companion object {
         private fun views(context: Context): RemoteViews {
             Themes.init(context)
-            val t = Themes.current
+            Lang.init(context)
+            val pal = Themes.current
             val open = PendingIntent.getActivity(
                 context, 0,
                 Intent(context, QuickNoteActivity::class.java)
@@ -77,11 +78,13 @@ class QuickNoteWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             return RemoteViews(context.packageName, R.layout.widget_quick_note).apply {
-                setInt(R.id.widget_bg, "setColorFilter", t.page.toArgb())
-                setInt(R.id.widget_dot, "setColorFilter", t.accent.toArgb())
-                setInt(R.id.widget_icon, "setColorFilter", t.onAccent.toArgb())
-                setTextColor(R.id.widget_title, t.ink.toArgb())
-                setTextColor(R.id.widget_sub, t.inkSoft.toArgb())
+                setInt(R.id.widget_bg, "setColorFilter", pal.page.toArgb())
+                setInt(R.id.widget_dot, "setColorFilter", pal.accent.toArgb())
+                setInt(R.id.widget_icon, "setColorFilter", pal.onAccent.toArgb())
+                setTextColor(R.id.widget_title, pal.ink.toArgb())
+                setTextColor(R.id.widget_sub, pal.inkSoft.toArgb())
+                setTextViewText(R.id.widget_title, tr("Quick note"))
+                setTextViewText(R.id.widget_sub, tr("How are you right now?"))
                 setOnClickPendingIntent(R.id.widget_root, open)
             }
         }
@@ -104,6 +107,7 @@ class QuickNoteActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
         Themes.init(applicationContext)
+        Lang.init(applicationContext)
         Haptics.init(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
@@ -142,7 +146,7 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
             Haptics.tap()
             Repo.addQuickNote(LocalDate.now().toString(), time, t)
             Repo.flush()
-            Toast.makeText(context, "Added to today's note", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, tr("Added to today's note"), Toast.LENGTH_SHORT).show()
         }
         onDone()
     }
@@ -167,21 +171,21 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 .pointerInput(Unit) { detectTapGestures { } } // taps on the card stay on the card
                 .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
         ) {
-            Text("Quick note · $time", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent)
+            Text(tr("Quick note") + " · $time", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent)
             Text(
-                "How are you right now?",
+                tr("How are you right now?"),
                 fontSize = 22.sp, fontWeight = FontWeight.Medium, color = Ink,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Text(
-                "A feeling, a thought, what just happened. It goes into today's note.",
+                tr("A feeling, a thought, what just happened. It goes into today's note."),
                 fontSize = 13.5.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                 modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
             )
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                placeholder = { Text("Right now I feel…", fontStyle = FontStyle.Italic, color = InkFaint) },
+                placeholder = { Text(tr("Right now I feel…"), fontStyle = FontStyle.Italic, color = InkFaint) },
                 textStyle = TextStyle(fontFamily = Lora, fontSize = 16.sp, lineHeight = 23.sp, color = Ink),
                 colors = journalFieldColors(),
                 shape = RoundedCornerShape(16.dp),
@@ -192,7 +196,7 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LinkButton("Cancel") { onDone() }
+                LinkButton(tr("Cancel")) { onDone() }
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = { save() },
@@ -201,7 +205,7 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                         containerColor = Accent, contentColor = OnAccent,
                         disabledContainerColor = AccentWash, disabledContentColor = InkFaint,
                     ),
-                ) { Text("Save to today", fontSize = 15.sp) }
+                ) { Text(tr("Save to today"), fontSize = 15.sp) }
             }
         }
     }

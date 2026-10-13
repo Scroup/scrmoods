@@ -56,9 +56,9 @@ fun DataScreen(onManage: () -> Unit) {
         if (uri != null) {
             try {
                 context.contentResolver.openOutputStream(uri, "wt")?.use { Repo.export(it) }
-                Toast.makeText(context, "Exported", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, tr("Exported"), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, tr("Export failed: {0}", e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -67,10 +67,18 @@ fun DataScreen(onManage: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
-        SectionHeader("Appearance")
+        SectionHeader(tr("Language"))
+        Segmented(
+            Lang.options.map { it.name },
+            Lang.options.indexOfFirst { it.code == Lang.code },
+            { i -> if (i != null) Lang.set(context, Lang.options[i].code) },
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        )
+
+        SectionHeader(tr("Appearance"))
         ThemePicker()
 
-        SectionHeader("Journal sections")
+        SectionHeader(tr("Journal sections"))
         val bipolar = data.sections.firstOrNull { it.id == Sections.BIPOLAR }
         if (bipolar != null) {
             Row(
@@ -79,9 +87,9 @@ fun DataScreen(onManage: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text("Mood scale", fontSize = 16.sp, color = Ink)
+                    Text(tr("Mood scale"), fontSize = 16.sp, color = Ink)
                     Text(
-                        "Track depression and mania from 0 to 10 at the top of the journal. Hiding it keeps your past answers.",
+                        tr("Track depression and mania from 0 to 10 at the top of the journal. Hiding it keeps your past answers."),
                         fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                     )
                 }
@@ -105,9 +113,9 @@ fun DataScreen(onManage: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Quote of the day", fontSize = 16.sp, color = Ink)
+                Text(tr("Quote of the day"), fontSize = 16.sp, color = Ink)
                 Text(
-                    "A quote or gentle reminder at the top of the journal, a new one each day.",
+                    tr("A quote or gentle reminder at the top of the journal, a new one each day."),
                     fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                 )
             }
@@ -124,44 +132,44 @@ fun DataScreen(onManage: () -> Unit) {
             )
         }
 
-        SettingSwitch("Vibrate on tap", "A soft click of vibration when you tap buttons and answers.", Haptics.enabled) {
+        SettingSwitch(tr("Vibrate on tap"), tr("A soft click of vibration when you tap buttons and answers."), Haptics.enabled) {
             Haptics.setEnabled(context, it)
         }
-        SettingSwitch("Welcome when opening", "A short greeting, then the journal rises into place.", Intro.enabled) {
+        SettingSwitch(tr("Welcome when opening"), tr("A short greeting, then the journal rises into place."), Intro.enabled) {
             Intro.setEnabled(context, it)
         }
-        SettingSwitch("Stars when answering", "Answer buttons squish when tapped and pop out little stars.", Sparkles.enabled) {
+        SettingSwitch(tr("Stars when answering"), tr("Answer buttons squish when tapped and pop out little stars."), Sparkles.enabled) {
             Sparkles.setEnabled(context, it)
         }
         SettingSwitch(
-            "Good night celebration",
-            "A \"Finish the day\" button under today's note: confetti, a good-night wish and a short lullaby.",
+            tr("Good night celebration"),
+            tr("A “Finish the day” button under today's note: confetti, a good-night wish and a short lullaby."),
             GoodNight.enabled,
         ) { GoodNight.setEnabled(context, it) }
         if (GoodNight.enabled) {
-            SettingSwitch("Play the lullaby", "Uses your media volume.", GoodNight.melody) { GoodNight.setMelody(context, it) }
-            LinkButton("Preview the celebration", Modifier.padding(start = 8.dp)) {
+            SettingSwitch(tr("Play the lullaby"), tr("Uses your media volume."), GoodNight.melody) { GoodNight.setMelody(context, it) }
+            LinkButton(tr("Preview the celebration"), Modifier.padding(start = 8.dp)) {
                 GoodNight.celebrate(context, LocalDate.now().toString(), remember = false)
             }
         }
 
-        SectionHeader("Your journal")
+        UpdateSection()
+
+        SectionHeader(tr("Your journal"))
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {
             val logged = data.entries.size
             val first = data.entries.keys.minOrNull()
-            Text("$logged ${if (logged == 1) "day" else "days"} written", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Ink)
-            if (first != null) Text("since $first", fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkSoft)
-            Text("${data.points.count { !it.archived }} tracking points in use", fontSize = 16.sp, color = Ink, modifier = Modifier.padding(top = 8.dp))
+            Text(tr("{0} {1} written", logged, trp(logged, "day", "days")), fontSize = 24.sp, fontWeight = FontWeight.Medium, color = Ink)
+            if (first != null) Text(tr("since {0}", first), fontSize = 16.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+            Text(tr("{0} tracking points in use", data.points.count { !it.archived }), fontSize = 16.sp, color = Ink, modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(10.dp))
             Text(
-                "Everything is stored in a single XML file on this phone:",
+                tr("Everything is stored in a single XML file on this phone:"),
                 fontSize = 14.sp, color = TextGray,
             )
             Text(Repo.filePath, fontSize = 12.sp, color = InkFaint, fontFamily = FontFamily.Monospace)
             Text(
-                "Export it to save a backup or to open it on your computer for statistics. " +
-                    "Each answer is saved with its number and its readable text, e.g. " +
-                    "<value point=\"outlook\" text=\"Positive\">2</value>.",
+                tr("Export it to save a backup or to open it on your computer for statistics. Each answer is saved with its number and its readable text, e.g. {0}.", "<value point=\"outlook\" text=\"Positive\">2</value>"),
                 fontSize = 14.sp, color = TextGray, modifier = Modifier.padding(top = 6.dp),
             )
         }
@@ -172,22 +180,22 @@ fun DataScreen(onManage: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 contentPadding = PaddingValues(vertical = 14.dp),
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Export data (XML)") }
+            ) { Text(tr("Export data (XML)")) }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { importLauncher.launch(arrayOf("text/xml", "application/xml", "text/plain", "*/*")) },
                 border = BorderStroke(1.dp, Rule),
                 contentPadding = PaddingValues(vertical = 14.dp),
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Import data from file…", color = Accent) }
+            ) { Text(tr("Import data from file…"), color = Accent) }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onManage, border = BorderStroke(1.dp, Rule), contentPadding = PaddingValues(vertical = 14.dp), modifier = Modifier.fillMaxWidth()) {
-                Text("Manage tracking points", color = Accent)
+                Text(tr("Manage tracking points"), color = Accent)
             }
         }
 
         Text(
-            "Tip: export regularly. Uninstalling the app deletes its data on the phone.",
+            tr("Tip: export regularly. Uninstalling the app deletes its data on the phone."),
             fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 20.dp),
         )
         Spacer(Modifier.height(24.dp))
@@ -195,18 +203,17 @@ fun DataScreen(onManage: () -> Unit) {
 
     pendingImport?.let { uri ->
         ConfirmDialog(
-            title = "Replace all data?",
-            message = "Importing replaces everything in the app (tracking points and all days) with the contents of the file. " +
-                "Export first if you want to keep a copy of the current data.",
-            confirmText = "Import",
+            title = tr("Replace all data?"),
+            message = tr("Importing replaces everything in the app (tracking points and all days) with the contents of the file. Export first if you want to keep a copy of the current data."),
+            confirmText = tr("Import"),
             onDismiss = { pendingImport = null },
             onConfirm = {
                 pendingImport = null
                 try {
                     context.contentResolver.openInputStream(uri)?.use { Repo.import(it) }
-                    Toast.makeText(context, "Imported ${Repo.data.entries.size} days", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, tr("Imported {0} {1}", Repo.data.entries.size, trp(Repo.data.entries.size, "day", "days")), Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, tr("Import failed: {0}", e.message), Toast.LENGTH_LONG).show()
                 }
             },
         )
@@ -249,7 +256,7 @@ private fun ThemePicker() {
                         }
                         // one line, centred, same size on every card
                         Text(
-                            t.name,
+                            tr(t.name),
                             fontSize = 12.sp,
                             fontStyle = if (selected) FontStyle.Normal else FontStyle.Italic,
                             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,

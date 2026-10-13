@@ -80,10 +80,10 @@ private fun buildSteps(d: AppData): List<Step> {
     for (s in d.sections) {
         if (s.hidden) continue
         if (s.id == Sections.BIPOLAR) {
-            if (d.points.any { it.id == MoodPoints.SCALE }) steps += Step.Mood(s.title)
+            if (d.points.any { it.id == MoodPoints.SCALE }) steps += Step.Mood(s.name)
             continue
         }
-        for (p in d.points) if (p.sectionId == s.id && !p.archived) steps += Step.Point(p, s.title)
+        for (p in d.points) if (p.sectionId == s.id && !p.archived) steps += Step.Point(p, s.name)
     }
     steps += Step.Note
     return steps
@@ -139,14 +139,14 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
     ) {
         // top: close, progress, skip
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { Haptics.tap(); onClose() }) { Icon(Icons.Filled.Close, "Close", tint = InkSoft) }
+            IconButton(onClick = { Haptics.tap(); onClose() }) { Icon(Icons.Filled.Close, tr("Close"), tint = InkSoft) }
             val progress by animateFloatAsState((index + 1f) / steps.size, tween(400), label = "progress")
             Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Rule)) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(Accent))
             }
             if (steps[index] !is Step.Note) {
                 Text(
-                    "Skip",
+                    tr("Skip"),
                     fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                     modifier = Modifier
                         .padding(start = 8.dp)
@@ -157,7 +157,7 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
             } else Spacer(Modifier.width(16.dp))
         }
         Text(
-            "${index + 1} of ${steps.size}",
+            tr("{0} of {1}", index + 1, steps.size),
             fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkFaint,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )
@@ -205,7 +205,7 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
 
         // bottom: back
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-            if (index > 0) LinkButton("‹ Previous") { go(index - 1) }
+            if (index > 0) LinkButton("‹ " + tr("Previous")) { go(index - 1) }
         }
     }
 }
@@ -227,7 +227,7 @@ private fun BigQuestion(text: String) {
 @Composable
 private fun ChoiceStep(s: Step.Point, value: String?, onPick: (String) -> Unit) {
     Kicker(s.section)
-    BigQuestion(s.p.label)
+    BigQuestion(s.p.title)
     val options: List<Pair<Int, String>> =
         if (s.p.type == PointType.YESNO) listOf(1 to "Yes", 0 to "No") else s.p.options.mapIndexed { i, o -> i to o }
     val selected = value?.toIntOrNull()
@@ -255,7 +255,7 @@ private fun ChoiceStep(s: Step.Point, value: String?, onPick: (String) -> Unit) 
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    label, fontSize = 18.sp, textAlign = TextAlign.Center,
+                    tr(label), fontSize = 18.sp, textAlign = TextAlign.Center,
                     fontWeight = if (sel) FontWeight.Medium else FontWeight.Normal,
                     color = if (sel) Color.White else Ink,
                 )
@@ -276,7 +276,7 @@ private fun answerColor(g: Float): Color =
 @Composable
 private fun MoodStep(section: String, value: Int?, onPick: (Int) -> Unit) {
     Kicker(section)
-    BigQuestion("Where is your mood today?")
+    BigQuestion(tr("Where is your mood today?"))
     for (row in listOf(0..5, 6..10)) {
         Row(
             Modifier.fillMaxWidth().padding(bottom = 10.dp),
@@ -304,9 +304,9 @@ private fun MoodStep(section: String, value: Int?, onPick: (Int) -> Unit) {
         }
     }
     Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
-        Text("0 depression", fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
-        Text("5 balanced", fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        Text("10 mania", fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+        Text(tr("0 depression"), fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
+        Text(tr("5 balanced"), fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        Text(tr("10 mania"), fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
     }
     // the chosen state, in the same fixed-height space so nothing jumps
     Box(Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(top = 18.dp), contentAlignment = Alignment.TopCenter) {
@@ -338,10 +338,10 @@ private fun NumberStep(s: Step.Point, date: String, value: String?, onDone: (Str
     var v by remember(p.id, date) { mutableFloatStateOf(start) }
 
     Kicker(s.section)
-    BigQuestion(p.label)
+    BigQuestion(p.title)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
         Text(formatNumber(v), fontSize = 52.sp, fontWeight = FontWeight.Medium, color = Accent)
-        if (p.unit.isNotBlank()) Text(" " + p.unit, fontSize = 20.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.padding(bottom = 10.dp))
+        if (p.unit.isNotBlank()) Text(" " + tr(p.unit), fontSize = 20.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.padding(bottom = 10.dp))
     }
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         RoundButton(onClick = { v = snap(v - step) }) { Text("−", fontSize = 22.sp, color = Ink) }
@@ -359,21 +359,21 @@ private fun NumberStep(s: Step.Point, date: String, value: String?, onDone: (Str
         )
         RoundButton(onClick = { v = snap(v + step) }) { Text("+", fontSize = 22.sp, color = Ink) }
     }
-    NextButton("Next", Modifier.padding(top = 28.dp)) { onDone(formatNumber(v)) }
+    NextButton(tr("Next"), Modifier.padding(top = 28.dp)) { onDone(formatNumber(v)) }
 }
 
 @Composable
 private fun TextStep(s: Step.Point, value: String?, onDone: (String) -> Unit) {
     var text by remember(s.p.id) { mutableStateOf(value ?: "") }
     Kicker(s.section)
-    BigQuestion(s.p.label)
+    BigQuestion(s.p.title)
     OutlinedTextField(
         value = text, onValueChange = { text = it },
         textStyle = TextStyle(fontFamily = Lora, fontSize = 16.sp, color = Ink),
         colors = journalFieldColors(), shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
     )
-    NextButton("Next", Modifier.padding(top = 20.dp)) { onDone(text.trim()) }
+    NextButton(tr("Next"), Modifier.padding(top = 20.dp)) { onDone(text.trim()) }
 }
 
 /** Last page: the day's note, then the good-night celebration. */
@@ -381,16 +381,16 @@ private fun TextStep(s: Step.Point, value: String?, onDone: (String) -> Unit) {
 private fun NoteStep(saved: String, finishedBefore: Boolean, onFinish: (String) -> Unit) {
     val focus = LocalFocusManager.current
     var text by remember { mutableStateOf(saved) }
-    Kicker("Today's note")
-    BigQuestion("Anything you'd like to remember about today?")
+    Kicker(tr("Today's note"))
+    BigQuestion(tr("Anything you'd like to remember about today?"))
     OutlinedTextField(
         value = text, onValueChange = { text = it },
-        placeholder = { Text("Write about your day…", fontStyle = FontStyle.Italic, color = InkFaint) },
+        placeholder = { Text(tr("Write about your day…"), fontStyle = FontStyle.Italic, color = InkFaint) },
         textStyle = TextStyle(fontFamily = Lora, fontSize = 16.sp, lineHeight = 23.sp, color = Ink),
         colors = journalFieldColors(), shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
     )
-    NextButton(if (finishedBefore) "Save and close" else "Finish the day  ☾", Modifier.padding(top = 20.dp)) {
+    NextButton(if (finishedBefore) tr("Save and close") else tr("Finish the day") + "  ☾", Modifier.padding(top = 20.dp)) {
         focus.clearFocus()
         onFinish(text)
     }
@@ -420,9 +420,9 @@ fun QuickCheckInButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Quick check-in", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = OnAccent)
+            Text(tr("Quick check-in"), fontSize = 18.sp, fontWeight = FontWeight.Medium, color = OnAccent)
             Text(
-                "One question at a time, no distractions",
+                tr("One question at a time, no distractions"),
                 fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = OnAccent.copy(alpha = 0.85f),
             )
         }

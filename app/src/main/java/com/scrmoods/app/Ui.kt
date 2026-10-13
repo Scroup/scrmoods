@@ -207,8 +207,8 @@ fun Segmented(
     idleColor: Color = Paper,
     playful: Boolean = false, // answer pills in the journal squish and pop stars when tapped
 ) {
-    var fontSize by remember(options, maxFont) { mutableStateOf(maxFont) }
-    var settled by remember(options, maxFont) { mutableStateOf(false) }
+    var fontSize by remember(options, maxFont, Lang.code) { mutableStateOf(maxFont) }
+    var settled by remember(options, maxFont, Lang.code) { mutableStateOf(false) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         for (row in options.withIndex().chunked(5)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -233,7 +233,7 @@ fun Segmented(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            label,
+                            tr(label),
                             color = if (isSel) OnAccent else Ink,
                             fontSize = fontSize.sp,
                             textAlign = TextAlign.Center,
@@ -322,7 +322,7 @@ fun TextInputDialog(
     initial: String,
     label: String = "",
     singleLine: Boolean = false,
-    confirmText: String = "Save",
+    confirmText: String = tr("Save"),
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
 ) {
@@ -344,7 +344,7 @@ fun TextInputDialog(
             )
         },
         confirmButton = { TextButton(onClick = { onSave(text) }) { Text(confirmText, color = Accent, fontWeight = FontWeight.Medium) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = InkSoft) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel"), color = InkSoft) } },
     )
 }
 
@@ -363,6 +363,6 @@ fun ConfirmDialog(
         title = { Text(title, fontWeight = FontWeight.Medium) },
         text = { Text(message, color = InkSoft, lineHeight = 22.sp) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirmText, color = Accent, fontWeight = FontWeight.Medium) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = InkSoft) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel"), color = InkSoft) } },
     )
 }

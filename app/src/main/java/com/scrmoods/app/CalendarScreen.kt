@@ -61,7 +61,6 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
     val data = Repo.data
     val outlook = data.points.firstOrNull { it.id == "outlook" }
     val today = LocalDate.now()
-    val monthFmt = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
 
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
         // Month as a page heading: large month name, year in italic, arrows to turn the page.
@@ -71,17 +70,17 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
         ) {
             Column(Modifier.weight(1f).clickable { month = YearMonth.from(today) }) {
                 Text(
-                    month.format(DateTimeFormatter.ofPattern("LLLL", Locale.getDefault())).replaceFirstChar { it.uppercase() },
+                    month.format(DateTimeFormatter.ofPattern("LLLL", Lang.locale)).replaceFirstChar { it.uppercase() },
                     fontSize = 32.sp, fontWeight = FontWeight.Medium, color = Ink, lineHeight = 38.sp,
                 )
                 Text(month.year.toString(), fontSize = 15.5.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
             Row(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RoundButton(onClick = { month = month.minusMonths(1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month", tint = Ink)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, tr("Previous month"), tint = Ink)
                 }
                 RoundButton(onClick = { month = month.plusMonths(1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month", tint = Ink)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, tr("Next month"), tint = Ink)
                 }
             }
         }
@@ -91,7 +90,7 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
             for (i in 0 until 7) {
                 val dow = DayOfWeek.MONDAY.plus(i.toLong())
                 Text(
-                    dow.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                    dow.getDisplayName(TextStyle.SHORT, Lang.locale).replaceFirstChar { it.uppercase() },
                     modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
                     color = InkSoft, fontSize = 13.sp, fontStyle = FontStyle.Italic,
                 )
@@ -122,24 +121,24 @@ fun CalendarScreen(selected: LocalDate, onPick: (LocalDate) -> Unit) {
 
         val logged = (1..days).count { data.entries.containsKey(month.atDay(it).toString()) }
         Text(
-            "Days logged this month: $logged",
+            tr("Days logged this month: {0}", logged),
             color = TextGray, fontSize = 15.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
         if (outlook != null && outlook.options.isNotEmpty()) {
-            Text("Dot colour = overall outlook", color = TextGray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            Text(tr("Dot colour = overall outlook"), color = TextGray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 outlook.options.forEachIndexed { i, o ->
                     val f = if (outlook.options.size > 1) i.toFloat() / (outlook.options.size - 1) else 1f
                     Box(Modifier.size(12.dp).clip(CircleShape).background(moodColor(f)))
-                    Text(o, fontSize = 14.sp, color = TextDark)
+                    Text(tr(o), fontSize = 14.sp, color = TextDark)
                 }
                 Box(Modifier.size(12.dp).clip(CircleShape).background(InkSoft))
-                Text("Other entries", fontSize = 14.sp, color = TextDark)
+                Text(tr("Other entries"), fontSize = 14.sp, color = TextDark)
             }
         }
         Text(
-            "Tap a day to open its check-in.",
+            tr("Tap a day to open its check-in."),
             color = InkFaint, fontSize = 14.sp, fontStyle = FontStyle.Italic,
             modifier = Modifier.padding(horizontal = 16.dp),
         )

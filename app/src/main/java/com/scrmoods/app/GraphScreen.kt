@@ -73,14 +73,14 @@ private fun stats(p: TrackingPoint, days: List<LocalDate>): Stats? {
 }
 
 private fun summary(p: TrackingPoint, s: Stats?): String {
-    if (s == null) return "no answers"
+    if (s == null) return tr("no answers")
     return when (p.type) {
-        PointType.YESNO -> "Yes on ${(s.avg * 100).roundToInt()}% of ${s.count} days"
+        PointType.YESNO -> tr("Yes on {0}% of {1} {2}", (s.avg * 100).roundToInt(), s.count, trp(s.count, "day", "days"))
         PointType.SCALE -> {
-            val near = p.options.getOrNull(s.avg.roundToInt()) ?: ""
-            "avg ${"%.1f".format(Locale.US, s.avg)} ($near), ${s.count} days"
+            val near = p.options.getOrNull(s.avg.roundToInt())?.let { tr(it) } ?: ""
+            tr("avg {0} ({1}), {2} {3}", "%.1f".format(Locale.US, s.avg), near, s.count, trp(s.count, "day", "days"))
         }
-        PointType.NUMBER -> "avg ${"%.1f".format(Locale.US, s.avg)}${if (p.unit.isNotBlank()) " " + p.unit else ""}, ${s.count} days"
+        PointType.NUMBER -> tr("avg {0}, {1} {2}", "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " " + tr(p.unit) else "", s.count, trp(s.count, "day", "days"))
         PointType.TEXT -> ""
     }
 }
@@ -99,7 +99,7 @@ fun GraphScreen() {
     val days = (nDays - 1 downTo 0).map { today.minusDays(it.toLong()) }
 
     if (point == null) {
-        Text("No tracking points to chart yet.", modifier = Modifier.padding(16.dp), color = TextGray)
+        Text(tr("No tracking points to chart yet."), modifier = Modifier.padding(16.dp), color = TextGray)
         return
     }
     Column(Modifier.fillMaxSize().background(Paper).verticalScroll(rememberScrollState())) {
@@ -115,17 +115,17 @@ fun GraphScreen() {
         var showSummary by remember { mutableStateOf(false) }
         SummaryButton(periodLabel) { showSummary = true }
         if (showSummary) {
-            val pages = remember(rangeIdx) { SummaryLogic.build(Repo.data, days, periodLabel) }
+            val pages = remember(rangeIdx, Lang.code) { SummaryLogic.build(Repo.data, days, periodLabel) }
             SummaryDialog(pages) { showSummary = false }
         }
 
         val moodOn = data.sections.firstOrNull { it.id == Sections.BIPOLAR }?.hidden == false
-        if (moodOn) TrendCard("Mood trend") { MoodTrendChart(days) }
+        if (moodOn) TrendCard(tr("Mood trend")) { MoodTrendChart(days) }
 
         val sleep = data.points.firstOrNull { it.id == "sleep_hours" && !it.archived }
-        if (sleep != null) TrendCard("Sleep pattern") { SleepChart(sleep, days) }
+        if (sleep != null) TrendCard(tr("Sleep pattern")) { SleepChart(sleep, days) }
 
-        SectionHeader("Any tracking point")
+        SectionHeader(tr("Any tracking point"))
         // The chosen tracking point is the heading; tap it to pick another.
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp)) {
             Column(
@@ -137,19 +137,19 @@ fun GraphScreen() {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        point.label + if (point.archived) " (removed)" else "",
+                        point.title + if (point.archived) " " + tr("(removed)") else "",
                         fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium, color = Ink,
                         modifier = Modifier.weight(1f, fill = false),
                         maxLines = 3, overflow = TextOverflow.Ellipsis,
                     )
                     Icon(Icons.Filled.ArrowDropDown, null, tint = Accent)
                 }
-                Text("Tap to look at another tracking point", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+                Text(tr("Tap to look at another tracking point"), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft)
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 for (p in chartable) {
                     DropdownMenuItem(
-                        text = { Text(p.label + if (p.archived) " (removed)" else "", maxLines = 2, color = Ink) },
+                        text = { Text(p.title + if (p.archived) " " + tr("(removed)") else "", maxLines = 2, color = Ink) },
                         onClick = { pointId = p.id; menuOpen = false },
                     )
                 }
@@ -166,7 +166,7 @@ fun GraphScreen() {
         ) {
             Chart(point, days)
 
-        val dfmt = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+        val dfmt = DateTimeFormatter.ofPattern("d MMM", Lang.locale)
         Row(Modifier.fillMaxWidth().padding(start = 72.dp, end = 16.dp)) {
             Text(days.first().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
             Text(days.last().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft)
@@ -175,17 +175,17 @@ fun GraphScreen() {
 
         // Stats for the chosen point
         val s = stats(point, days)
-        SectionHeader("In numbers")
+        SectionHeader(tr("In numbers"))
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 10.dp)) {
-            StatLine("Days answered", "${s?.count ?: 0} of $nDays")
+            StatLine("Days answered", tr("{0} of {1}", s?.count ?: 0, nDays))
             if (s != null) when (point.type) {
                 PointType.YESNO -> {
                     val yes = s.values.count { it >= 0.5f }
-                    StatLine("Yes", "$yes days (${(yes * 100f / s.count).roundToInt()}%)")
-                    StatLine("No", "${s.count - yes} days")
+                    StatLine("Yes", "$yes ${trp(yes, "day", "days")} (${(yes * 100f / s.count).roundToInt()}%)")
+                    StatLine("No", "${s.count - yes} ${trp(s.count - yes, "day", "days")}")
                 }
                 PointType.SCALE -> {
-                    StatLine("Average", "%.2f".format(Locale.US, s.avg) + "  → " + (point.options.getOrNull(s.avg.roundToInt()) ?: ""))
+                    StatLine("Average", "%.2f".format(Locale.US, s.avg) + "  → " + (point.options.getOrNull(s.avg.roundToInt())?.let { tr(it) } ?: ""))
                     Spacer(Modifier.height(8.dp))
                     point.options.forEachIndexed { i, o ->
                         val c = s.values.count { it.roundToInt() == i }
@@ -193,7 +193,7 @@ fun GraphScreen() {
                     }
                 }
                 PointType.NUMBER -> {
-                    val u = if (point.unit.isNotBlank()) " ${point.unit}" else ""
+                    val u = if (point.unit.isNotBlank()) " ${tr(point.unit)}" else ""
                     StatLine("Average", "%.1f".format(Locale.US, s.avg) + u)
                     StatLine("Lowest", formatNumber(s.min) + u)
                     StatLine("Highest", formatNumber(s.max) + u)
@@ -203,10 +203,10 @@ fun GraphScreen() {
         }
 
         // Overview of everything in the same period, laid out like the journal (removed points left out).
-        SectionHeader("Everything, last ${ranges[rangeIdx].second}")
+        SectionHeader(tr("Everything, last {0}", tr(ranges[rangeIdx].second)))
         Text(
-            "Green is going well, red needs attention. Each square is a day" +
-                (if (nDays > 31) " (or a few days averaged)" else "") + ".",
+            if (nDays > 31) tr("Green is going well, red needs attention. Each square is a day (or a few days averaged).")
+            else tr("Green is going well, red needs attention. Each square is a day."),
             fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = InkSoft, lineHeight = 19.sp,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
         )
@@ -215,7 +215,7 @@ fun GraphScreen() {
             val pts = chartable.filter { it.sectionId == section.id && !it.archived }
             if (pts.isEmpty()) continue
             Text(
-                section.title, fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent,
+                section.name, fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 2.dp),
             )
             for (p in pts) OverviewRow(p, days, stats(p, days)) { pointId = p.id }
@@ -243,11 +243,11 @@ private fun verdict(p: TrackingPoint, s: Stats?): Verdict {
 
 /** Short tag text: the usual answer ("Positive"), the yes-rate ("Yes 80%") or the average ("7.5 hrs"). */
 private fun tagText(p: TrackingPoint, s: Stats): String = when (p.type) {
-    PointType.SCALE -> p.options.getOrNull(s.avg.roundToInt()) ?: formatNumber(s.avg)
-    PointType.YESNO -> if (s.avg >= 0.5f) "Yes ${(s.avg * 100).roundToInt()}%" else "No ${((1 - s.avg) * 100).roundToInt()}%"
+    PointType.SCALE -> p.options.getOrNull(s.avg.roundToInt())?.let { tr(it) } ?: formatNumber(s.avg)
+    PointType.YESNO -> if (s.avg >= 0.5f) tr("Yes") + " ${(s.avg * 100).roundToInt()}%" else tr("No") + " ${((1 - s.avg) * 100).roundToInt()}%"
     PointType.NUMBER ->
         if (p.id == MoodPoints.SCALE) "${MoodScale.level(s.avg.roundToInt()).name} ${"%.1f".format(Locale.US, s.avg)}"
-        else "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " ${p.unit}" else ""
+        else "%.1f".format(Locale.US, s.avg) + if (p.unit.isNotBlank()) " ${tr(p.unit)}" else ""
     PointType.TEXT -> ""
 }
 
@@ -262,9 +262,9 @@ private fun OverviewRow(p: TrackingPoint, days: List<LocalDate>, s: Stats?, onCl
     }
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(p.label, fontSize = 15.sp, lineHeight = 20.sp, color = Ink, modifier = Modifier.weight(1f).padding(end = 10.dp))
+            Text(p.title, fontSize = 15.sp, lineHeight = 20.sp, color = Ink, modifier = Modifier.weight(1f).padding(end = 10.dp))
             if (s == null) {
-                Text("no answers yet", fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = InkFaint)
+                Text(tr("no answers yet"), fontSize = 13.5.sp, fontStyle = FontStyle.Italic, color = InkFaint)
             } else {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -279,7 +279,7 @@ private fun OverviewRow(p: TrackingPoint, days: List<LocalDate>, s: Stats?, onCl
                             .padding(horizontal = 10.dp, vertical = 2.dp),
                     )
                     Text(
-                        "${s.count} ${if (s.count == 1) "day" else "days"}",
+                        "${s.count} ${trp(s.count, "day", "days")}",
                         fontSize = 12.5.sp, fontStyle = FontStyle.Italic, color = InkSoft,
                         modifier = Modifier.padding(top = 2.dp, end = 4.dp),
                     )
@@ -289,7 +289,7 @@ private fun OverviewRow(p: TrackingPoint, days: List<LocalDate>, s: Stats?, onCl
         DayStrip(p, days, Modifier.padding(top = 8.dp))
         if (v == Verdict.BAD) {
             Text(
-                "Needs attention",
+                tr("Needs attention"),
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Medium, color = Danger,
                 modifier = Modifier.padding(top = 6.dp),
             )
@@ -325,7 +325,7 @@ private fun DayStrip(p: TrackingPoint, days: List<LocalDate>, modifier: Modifier
 @Composable
 private fun StatLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(label, fontSize = 16.sp, color = TextGray, modifier = Modifier.weight(1f))
+        Text(tr(label), fontSize = 16.sp, color = TextGray, modifier = Modifier.weight(1f))
         Text(value, fontSize = 16.sp, color = TextDark, fontWeight = FontWeight.Medium)
     }
 }
@@ -333,7 +333,7 @@ private fun StatLine(label: String, value: String) {
 @Composable
 private fun DistBar(label: String, count: Int, total: Int, color: Color) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, fontSize = 14.sp, color = TextDark, modifier = Modifier.width(100.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(tr(label), fontSize = 14.sp, color = TextDark, modifier = Modifier.width(100.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
         Box(Modifier.weight(1f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(Paper)) {
             if (count > 0) Box(
                 Modifier.fillMaxHeight().fillMaxWidth(count.toFloat() / total).clip(RoundedCornerShape(4.dp)).background(color),
@@ -347,9 +347,9 @@ private fun DistBar(label: String, count: Int, total: Int, color: Color) {
 private fun Chart(p: TrackingPoint, days: List<LocalDate>) {
     val (lo, hi) = p.yRange()
     val labels: List<String> = when (p.type) {
-        PointType.SCALE -> p.options.reversed()
-        PointType.YESNO -> listOf("Yes", "No")
-        else -> if (p.id == MoodPoints.SCALE) listOf("Mania", "Balanced", "Depression")
+        PointType.SCALE -> p.options.reversed().map { tr(it) }
+        PointType.YESNO -> listOf(tr("Yes"), tr("No"))
+        else -> if (p.id == MoodPoints.SCALE) listOf(tr("Mania"), tr("Balanced"), tr("Depression"))
             else listOf(formatNumber(hi), formatNumber((lo + hi) / 2), formatNumber(lo))
     }
     val values: List<Float?> = days.map { p.numeric(Repo.data.entries[it.toString()]?.values?.get(p.id)) }
@@ -427,7 +427,7 @@ private fun TrendCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun DateEnds(days: List<LocalDate>) {
-    val dfmt = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    val dfmt = DateTimeFormatter.ofPattern("d MMM", Lang.locale)
     Row(Modifier.fillMaxWidth().padding(start = 72.dp, end = 14.dp)) {
         Text(days.first().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
         Text(days.last().format(dfmt), fontSize = 12.sp, fontStyle = FontStyle.Italic, color = InkSoft)
@@ -444,7 +444,7 @@ private fun LegendItem(color: Color, label: String, line: Boolean = false) {
                 .clip(RoundedCornerShape(3.dp))
                 .background(color),
         )
-        Text(label, fontSize = 12.sp, color = InkSoft, modifier = Modifier.padding(start = 5.dp))
+        Text(tr(label), fontSize = 12.sp, color = InkSoft, modifier = Modifier.padding(start = 5.dp))
     }
 }
 
@@ -471,7 +471,7 @@ private fun MoodTrendChart(days: List<LocalDate>) {
             Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            for (l in listOf("10 Mania", "5 Balanced", "0 Depression")) {
+            for (l in listOf("10 " + tr("Mania"), "5 " + tr("Balanced"), "0 " + tr("Depression"))) {
                 Text(l, fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -510,12 +510,12 @@ private fun MoodTrendChart(days: List<LocalDate>) {
         Row { LegendItem(MoodScale.zoneColor(2), "Mild to moderate"); LegendItem(MoodScale.zoneColor(0), "Severe"); LegendItem(Accent, "Mixed", line = true) }
         val answered = vals.count { it.a != null }
         if (answered == 0) {
-            Text("No mood scale answers in this period yet.", fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(top = 8.dp))
+            Text(tr("No mood scale answers in this period yet."), fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkFaint, modifier = Modifier.padding(top = 8.dp))
         } else {
             val balanced = vals.count { it.a != null && it.a.roundToInt() in 4..6 && it.b == null }
             val mixedDays = vals.count { it.b != null }
             Text(
-                "Balanced on $balanced of $answered days" + if (mixedDays > 0) ", mixed on $mixedDays" else "",
+                tr("Balanced on {0} of {1} days", balanced, answered) + if (mixedDays > 0) tr(", mixed on {0}", mixedDays) else "",
                 fontSize = 13.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.padding(top = 8.dp),
             )
         }
@@ -529,7 +529,7 @@ private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
     val known = vals.filterNotNull()
     val maxV = maxOf(10f, ((known.maxOrNull() ?: 0f) / 2f).let { kotlin.math.ceil(it) * 2f })
     val avg = if (known.isEmpty()) null else known.average().toFloat()
-    val unit = p.unit.ifBlank { "hrs" }
+    val unit = tr(p.unit.ifBlank { "hrs" })
     val grid = listOf(maxV, maxV * 3 / 4, maxV / 2, maxV / 4, 0f)
 
     Row(Modifier.fillMaxWidth().height(190.dp).padding(end = 14.dp)) {
@@ -537,7 +537,7 @@ private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
             Modifier.width(72.dp).fillMaxHeight().padding(start = 10.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            for (g in grid) Text("${formatNumber(g)} h", fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+            for (g in grid) Text(tr("{0} h", formatNumber(g)), fontSize = 11.sp, fontStyle = FontStyle.Italic, color = InkSoft)
         }
         Canvas(Modifier.weight(1f).fillMaxHeight()) {
             val top = 8.dp.toPx(); val bottom = size.height - 8.dp.toPx(); val h = bottom - top
@@ -567,8 +567,8 @@ private fun SleepChart(p: TrackingPoint, days: List<LocalDate>) {
     }
     DateEnds(days)
     Text(
-        if (known.isEmpty()) "No sleep answers in this period yet."
-        else "Average ${"%.1f".format(Locale.US, avg)} $unit (dashed line), shortest ${formatNumber(known.min())}, longest ${formatNumber(known.max())}, ${known.size} nights",
+        if (known.isEmpty()) tr("No sleep answers in this period yet.")
+        else tr("Average {0} {1} (dashed line), shortest {2}, longest {3}, {4} {5}", "%.1f".format(Locale.US, avg), unit, formatNumber(known.min()), formatNumber(known.max()), known.size, trp(known.size, "night", "nights")),
         fontSize = 13.sp, fontStyle = FontStyle.Italic, color = if (known.isEmpty()) InkFaint else InkSoft, lineHeight = 18.sp,
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
     )

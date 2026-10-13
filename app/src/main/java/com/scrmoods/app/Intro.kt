@@ -59,10 +59,10 @@ object Intro {
     }
 
     fun greeting(now: LocalTime = LocalTime.now()): String = when (now.hour) {
-        in 5..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        in 17..22 -> "Good evening"
-        else -> "Hello, night owl"
+        in 5..11 -> tr("Good morning")
+        in 12..16 -> tr("Good afternoon")
+        in 17..22 -> tr("Good evening")
+        else -> tr("Hello, night owl")
     }
 }
 
@@ -119,7 +119,7 @@ fun WelcomeOverlay() {
                 modifier = Modifier.padding(top = 6.dp),
             )
             Text(
-                "Welcome back. Let's see how today is going.",
+                tr("Welcome back. Let's see how today is going."),
                 fontSize = 16.sp, lineHeight = 22.sp, fontStyle = FontStyle.Italic, color = InkSoft, textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp),
             )
