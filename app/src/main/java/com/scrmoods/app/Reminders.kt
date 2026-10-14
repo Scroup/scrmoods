@@ -60,13 +60,13 @@ object Reminders {
     }
 
     /** The next moment (today or tomorrow) the given "HH:mm" time comes round. */
-    private fun nextOccurrence(time: String, after: LocalDateTime = LocalDateTime.now()): LocalDateTime {
+    fun nextOccurrence(time: String, after: LocalDateTime = LocalDateTime.now()): LocalDateTime {
         val t = LocalTime.parse(time)
         val today = LocalDate.now().atTime(t)
         return if (today.isAfter(after.plusSeconds(5))) today else today.plusDays(1)
     }
 
-    private fun setAlarm(context: Context, atMillis: Long, pi: PendingIntent) {
+    fun setAlarm(context: Context, atMillis: Long, pi: PendingIntent) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         val canExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
         if (canExact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
@@ -102,6 +102,7 @@ object Reminders {
             }
         }
         prefs.edit().putStringSet(KEY_SCHEDULED, keys).apply()
+        SleepNotifier.schedule(ctx) // the morning sleep question rides along (after restarts too)
     }
 
     fun ensureChannel(context: Context) {

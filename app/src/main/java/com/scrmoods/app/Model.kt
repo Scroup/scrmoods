@@ -108,6 +108,19 @@ object Water {
     fun litres(cups: Float): String = String.format(java.util.Locale.US, "%.1f", cups * ML_PER_CUP / 1000f)
 }
 
+/** Last night's sleep: hours, and how it felt (Poor / OK / Good). Asked in the morning by the widget, a notification or a card. */
+object Sleep {
+    const val HOURS = "sleep_hours"
+    const val QUALITY = "restful_sleep"
+    const val QUALITY_LABEL = "How well did you sleep?"
+    val QUALITY_OPTIONS = listOf("Poor", "OK", "Good")
+    /** The old yes/no wording, replaced by the Poor / OK / Good scale. */
+    const val OLD_QUALITY_LABEL = "Did you have a restful night's sleep?"
+    /** Until this hour the morning sleep question is shown. */
+    const val MORNING_END = 12
+    const val MORNING_START = 4
+}
+
 /** Ids of the mood scale (0 severe depression, 5 balanced, 10 mania) and its "mixed features" flag. */
 object MoodPoints {
     const val SCALE = "bipolar_mood"
@@ -147,7 +160,7 @@ object Defaults {
 
         TrackingPoint("sleep_hours", Sections.HEALTH, PointType.NUMBER, "Last night's sleep",
             min = 0f, max = 16f, step = 0.5f, unit = "hrs"),
-        TrackingPoint("restful_sleep", Sections.HEALTH, PointType.YESNO, "Did you have a restful night's sleep?", better = Better.HIGHER),
+        TrackingPoint(Sleep.QUALITY, Sections.HEALTH, PointType.SCALE, Sleep.QUALITY_LABEL, Sleep.QUALITY_OPTIONS, better = Better.HIGHER),
         TrackingPoint("nutrition", Sections.HEALTH, PointType.YESNO, "Have you met your nutrition needs today?", better = Better.HIGHER),
         TrackingPoint("outside", Sections.HEALTH, PointType.YESNO, "Did you spend time outside?", better = Better.HIGHER),
         TrackingPoint("exercise", Sections.HEALTH, PointType.YESNO, "Did you exercise today?", better = Better.HIGHER),
@@ -210,7 +223,26 @@ fun defaultBetter(id: String, type: PointType): Better =
  * Makes sure built-in sections exist (in their usual order) and that the mood scale and water points exist,
  * so files saved by older versions get the new features.
  */
-fun ensureBuiltIns(d: AppData): AppData {
+fun ensureBuiltIns(d: AppData): AppData = migrateSleepQuality(addBuiltIns(d))
+
+/** "Restful sleep" used to be yes/no; it's now Poor / OK / Good. Yes becomes Good, No becomes Poor. */
+private fun migrateSleepQuality(d: AppData): AppData {
+    val old = d.points.firstOrNull { it.id == Sleep.QUALITY && it.type == PointType.YESNO } ?: return d
+    val new = old.copy(
+        type = PointType.SCALE, options = Sleep.QUALITY_OPTIONS, better = Better.HIGHER, reminders = emptyList(),
+        label = if (old.label == Sleep.OLD_QUALITY_LABEL) Sleep.QUALITY_LABEL else old.label,
+    )
+    val entries = d.entries.mapValues { (_, e) ->
+        when (e.values[Sleep.QUALITY]) {
+            "1" -> e.copy(values = e.values + (Sleep.QUALITY to "2"))
+            "0" -> e.copy(values = e.values + (Sleep.QUALITY to "0"))
+            else -> e
+        }
+    }
+    return d.copy(points = d.points.map { if (it.id == Sleep.QUALITY) new else it }, entries = entries)
+}
+
+private fun addBuiltIns(d: AppData): AppData {
     val sections = d.sections.toMutableList()
     Defaults.sections.forEachIndexed { i, def ->
         if (sections.none { it.id == def.id }) sections.add(i.coerceAtMost(sections.size), def)

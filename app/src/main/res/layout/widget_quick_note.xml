@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget: tap to write a quick note into today's journal; the drop on the right adds a cup of water
-     without opening anything. Colours are set from the app's theme in code. -->
+<!-- Home-screen widget. Usually: tap to write a quick note into today's journal; the drop adds a cup of water and the
+     bowl adds a meal, without opening anything. In the morning (until noon), while last night's sleep isn't logged,
+     it asks the hours (− / + / ✓) and then how it felt (Poor / OK / Good). Colours are set from the app's theme in code. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -21,8 +22,9 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="10dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="12dp">
 
+        <!-- the round icon: a pencil, or a moon in the morning -->
         <FrameLayout
             android:layout_width="40dp"
             android:layout_height="40dp">
@@ -46,7 +48,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="10dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -54,11 +56,12 @@
                 android:id="@+id/widget_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
                 android:fontFamily="serif"
                 android:maxLines="1"
                 android:text="@string/widget_name"
                 android:textColor="#3B2A25"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/widget_sub"
@@ -73,28 +76,28 @@
                 android:textStyle="italic" />
         </LinearLayout>
 
-        <!-- +1 cup of water, right from the home screen -->
+        <!-- ===== usual mode: +1 cup of water and +1 meal ===== -->
         <LinearLayout
             android:id="@+id/widget_water"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="8dp">
+            android:paddingStart="6dp">
 
             <TextView
                 android:id="@+id/widget_water_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="4dp"
                 android:fontFamily="serif"
                 android:maxLines="1"
                 android:textColor="#A0594F"
-                android:textSize="14sp" />
+                android:textSize="13sp" />
 
             <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="40dp">
+                android:layout_width="38dp"
+                android:layout_height="38dp">
 
                 <ImageView
                     android:id="@+id/widget_water_dot"
@@ -105,8 +108,8 @@
 
                 <ImageView
                     android:id="@+id/widget_water_drop"
-                    android:layout_width="20dp"
-                    android:layout_height="24dp"
+                    android:layout_width="19dp"
+                    android:layout_height="23dp"
                     android:layout_gravity="center"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_water_drop" />
@@ -121,5 +124,177 @@
                     android:src="@drawable/ic_water_plus" />
             </FrameLayout>
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_meal"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:id="@+id/widget_meal_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#A0594F"
+                android:textSize="13sp" />
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp">
+
+                <ImageView
+                    android:id="@+id/widget_meal_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_meal_bowl"
+                    android:layout_width="23dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="1dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_meal_bowl" />
+
+                <ImageView
+                    android:id="@+id/widget_meal_plus"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="6dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_plus" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- ===== morning: the hours ===== -->
+        <LinearLayout
+            android:id="@+id/widget_sleep_hours"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:id="@+id/widget_sleep_minus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:contentDescription="−">
+
+                <ImageView
+                    android:id="@+id/widget_sleep_minus_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <TextView
+                    android:id="@+id/widget_sleep_minus_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="−"
+                    android:textSize="20sp" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/widget_sleep_plus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="+">
+
+                <ImageView
+                    android:id="@+id/widget_sleep_plus_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <TextView
+                    android:id="@+id/widget_sleep_plus_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="+"
+                    android:textSize="20sp" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/widget_sleep_save"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="✓">
+
+                <ImageView
+                    android:id="@+id/widget_sleep_save_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <TextView
+                    android:id="@+id/widget_sleep_save_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="✓"
+                    android:textSize="19sp" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- ===== morning: how it felt ===== -->
+        <LinearLayout
+            android:id="@+id/widget_sleep_faces"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/widget_face_0"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:padding="3dp"
+                android:src="@drawable/ic_face_poor" />
+
+            <ImageView
+                android:id="@+id/widget_face_1"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:padding="3dp"
+                android:src="@drawable/ic_face_ok" />
+
+            <ImageView
+                android:id="@+id/widget_face_2"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:padding="3dp"
+                android:src="@drawable/ic_face_good" />
+        </LinearLayout>
+
+        <!-- "not now": back to the quick note for today -->
+        <TextView
+            android:id="@+id/widget_sleep_skip"
+            android:layout_width="28dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="2dp"
+            android:gravity="center"
+            android:text="×"
+            android:textColor="#8A6B63"
+            android:textSize="18sp"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

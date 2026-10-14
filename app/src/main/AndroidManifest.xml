@@ -64,6 +64,8 @@
         </provider>
 
         <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <!-- The morning sleep question (notification reply and Poor / OK / Good) -->
+        <receiver android:name=".SleepReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

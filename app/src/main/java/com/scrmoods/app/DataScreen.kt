@@ -135,6 +135,9 @@ fun DataScreen(onManage: () -> Unit) {
         SectionHeader(tr("Water"))
         WaterSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
 
+        SectionHeader(tr("Sleep"))
+        MorningSleepSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
+
         SectionHeader(tr("Meals"))
         MealsSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
 

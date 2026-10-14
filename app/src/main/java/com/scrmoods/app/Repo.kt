@@ -65,6 +65,9 @@ object Repo {
     }
 
     /** Waits until everything is written to disk (used by the notification "Taken" button). */
+    /** Answers the home-screen widget shows (today's cups and meals, last night's sleep). */
+    private val WIDGET_POINTS = setOf(Water.POINT, Meals.MEALS, Sleep.HOURS, Sleep.QUALITY)
+
     fun flush() {
         writer.submit {}.get()
     }
@@ -93,7 +96,7 @@ object Repo {
             e.copy(values = v)
         }
         // the home-screen widget shows today's cups
-        if (pointId == Water.POINT) appContext?.let { QuickNoteWidget.refresh(it) }
+        if (pointId in WIDGET_POINTS) appContext?.let { QuickNoteWidget.refresh(it) }
     }
 
     fun setNote(date: String, note: String) = updateEntry(date) { it.copy(note = note.trim()) }
@@ -130,7 +133,7 @@ object Repo {
             } else d.entries
             d.copy(points = d.points.map { if (it.id == p.id) p else it }, entries = entries)
         }
-        if (p.id == Water.POINT) appContext?.let { QuickNoteWidget.refresh(it) }
+        if (p.id in WIDGET_POINTS) appContext?.let { QuickNoteWidget.refresh(it) }
         pointsChanged()
     }
 
@@ -167,7 +170,7 @@ object Repo {
 
     fun setSectionHidden(id: String, hidden: Boolean) {
         update { d -> d.copy(sections = d.sections.map { if (it.id == id) it.copy(hidden = hidden) else it }) }
-        if (id == Sections.WATER) appContext?.let { QuickNoteWidget.refresh(it) }
+        if (id == Sections.WATER || id == Sections.MEALS || id == Sections.HEALTH) appContext?.let { QuickNoteWidget.refresh(it) }
     }
 
     fun newId(prefix: String) = prefix + "_" + System.currentTimeMillis().toString(36)

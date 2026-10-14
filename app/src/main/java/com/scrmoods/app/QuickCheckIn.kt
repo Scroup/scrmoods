@@ -284,7 +284,7 @@ private val AnswerMid = Color(0xFFD9A040)
 private val AnswerGood = Color(0xFF5F9E55)
 
 /** 0 = bad (red), 0.5 = in between (amber), 1 = good (green). */
-private fun answerColor(g: Float): Color =
+fun answerColor(g: Float): Color =
     if (g < 0.5f) lerp(AnswerBad, AnswerMid, g * 2f) else lerp(AnswerMid, AnswerGood, (g - 0.5f) * 2f)
 
 /** The 0–10 mood scale as two rows of big circles, with the chosen state described underneath. */

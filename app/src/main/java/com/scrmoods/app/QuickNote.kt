@@ -67,8 +67,10 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Home-screen widget: one tap opens the quick note window; the drop on the right adds a cup of water
- * straight away, without opening anything. It takes the colours of the app's theme.
+ * Home-screen widget. Usually: one tap opens the quick note window; the drop adds a cup of water and the bowl adds
+ * a meal straight away, without opening anything. In the morning (until noon), while last night's sleep isn't logged,
+ * it asks the hours (− / + / ✓) and then how it felt (Poor / OK / Good), then goes back to the quick note.
+ * It takes the colours of the app's theme.
  */
 class QuickNoteWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -76,7 +78,8 @@ class QuickNoteWidget : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION_ADD_WATER) return super.onReceive(context, intent)
+        val action = intent.action ?: return super.onReceive(context, intent)
+        if (!action.startsWith(PREFIX)) return super.onReceive(context, intent)
         val app = context.applicationContext
         val pending = goAsync()
         Thread {
@@ -84,18 +87,32 @@ class QuickNoteWidget : AppWidgetProvider() {
                 Repo.init(app)
                 Lang.init(app)
                 Haptics.init(app)
-                val p = waterPoint(Repo.data)
-                if (p != null) {
-                    val today = LocalDate.now().toString()
-                    val n = (Repo.data.entries[today]?.values?.get(p.id)?.toFloatOrNull()?.toInt() ?: 0) + 1
-                    Repo.setValue(today, p.id, n.toString())
-                    Repo.flush()
-                    refresh(app)
-                    Haptics.tap()
-                    val msg = if (n == p.goalCups) tr("Goal reached. Well done!")
-                    else tr("+1 cup · {0} of {1}", n, p.goalCups)
-                    Handler(Looper.getMainLooper()).post { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
+                Haptics.tap()
+                val today = LocalDate.now().toString()
+                fun count(id: String) = Repo.data.entries[today]?.values?.get(id)?.toFloatOrNull()?.toInt() ?: 0
+                fun toast(msg: String) = Handler(Looper.getMainLooper()).post { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
+                when (action) {
+                    ACTION_ADD_WATER -> waterPoint(Repo.data)?.let { p ->
+                        val n = count(p.id) + 1
+                        Repo.setValue(today, p.id, n.toString())
+                        toast(if (n == p.goalCups) tr("Goal reached. Well done!") else tr("+1 cup · {0} of {1}", n, p.goalCups))
+                    }
+                    ACTION_ADD_MEAL -> mealsPoint(Repo.data)?.let { p ->
+                        val n = count(p.id) + 1
+                        Repo.setValue(today, p.id, n.toString())
+                        toast(if (n == p.goalMeals) tr("All your meals are in. Nicely done!") else tr("+1 meal · {0} of {1}", n, p.goalMeals))
+                    }
+                    ACTION_SLEEP_MINUS, ACTION_SLEEP_PLUS ->
+                        MorningSleep.setDraft(app, MorningSleep.draft(app, Repo.data) + if (action == ACTION_SLEEP_PLUS) 0.5f else -0.5f)
+                    ACTION_SLEEP_SAVE -> MorningSleep.saveHours(MorningSleep.draft(app, Repo.data))
+                    ACTION_SLEEP_SKIP -> MorningSleep.skip(app)
+                    else -> if (action.startsWith(ACTION_SLEEP_FACE)) {
+                        MorningSleep.saveQuality(action.removePrefix(ACTION_SLEEP_FACE).toIntOrNull() ?: 1)
+                        toast(tr("Thanks! Have a good day."))
+                    }
                 }
+                Repo.flush()
+                refresh(app)
             } finally {
                 pending.finish()
             }
@@ -103,52 +120,114 @@ class QuickNoteWidget : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_ADD_WATER = "com.scrmoods.app.ADD_WATER"
+        private const val PREFIX = "com.scrmoods.app.W_"
+        const val ACTION_ADD_WATER = PREFIX + "ADD_WATER"
+        const val ACTION_ADD_MEAL = PREFIX + "ADD_MEAL"
+        const val ACTION_SLEEP_MINUS = PREFIX + "SLEEP_MINUS"
+        const val ACTION_SLEEP_PLUS = PREFIX + "SLEEP_PLUS"
+        const val ACTION_SLEEP_SAVE = PREFIX + "SLEEP_SAVE"
+        const val ACTION_SLEEP_SKIP = PREFIX + "SLEEP_SKIP"
+        const val ACTION_SLEEP_FACE = PREFIX + "SLEEP_FACE_"
+
+        private fun broadcast(context: Context, action: String, code: Int) = PendingIntent.getBroadcast(
+            context, code, Intent(context, QuickNoteWidget::class.java).setAction(action),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
         private fun views(context: Context): RemoteViews {
             Themes.init(context)
             Lang.init(context)
             Repo.init(context)
             val pal = Themes.current
+            val d = Repo.data
+            val today = LocalDate.now().toString()
             val open = PendingIntent.getActivity(
                 context, 0,
                 Intent(context, QuickNoteActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
+            val ask = MorningSleep.askNow(context, d)
             return RemoteViews(context.packageName, R.layout.widget_quick_note).apply {
                 setInt(R.id.widget_bg, "setColorFilter", pal.page.toArgb())
                 setInt(R.id.widget_dot, "setColorFilter", pal.accent.toArgb())
                 setInt(R.id.widget_icon, "setColorFilter", pal.onAccent.toArgb())
                 setTextColor(R.id.widget_title, pal.ink.toArgb())
                 setTextColor(R.id.widget_sub, pal.inkSoft.toArgb())
+                setOnClickPendingIntent(R.id.widget_root, open)
+                fun show(id: Int, on: Boolean) = setViewVisibility(id, if (on) View.VISIBLE else View.GONE)
+                fun roundButton(frame: Int, dot: Int, text: Int, action: String, code: Int, strong: Boolean = false) {
+                    setInt(dot, "setColorFilter", (if (strong) pal.accent else pal.accentWash).toArgb())
+                    setTextColor(text, (if (strong) pal.onAccent else pal.ink).toArgb())
+                    setOnClickPendingIntent(frame, broadcast(context, action, code))
+                }
+
+                val morning = ask != MorningSleep.Ask.NONE
+                show(R.id.widget_sleep_hours, ask == MorningSleep.Ask.HOURS)
+                show(R.id.widget_sleep_faces, ask == MorningSleep.Ask.QUALITY)
+                show(R.id.widget_sleep_skip, morning)
+
+                if (morning) {
+                    // ===== the morning sleep question =====
+                    setImageViewResource(R.id.widget_icon, R.drawable.ic_moon)
+                    setTextColor(R.id.widget_sleep_skip, pal.inkSoft.toArgb())
+                    setOnClickPendingIntent(R.id.widget_sleep_skip, broadcast(context, ACTION_SLEEP_SKIP, 14))
+                    setContentDescription(R.id.widget_sleep_skip, tr("Not now"))
+                    if (ask == MorningSleep.Ask.HOURS) {
+                        setTextViewText(R.id.widget_title, tr("How long did you sleep?"))
+                        setTextViewText(R.id.widget_sub, tr("{0} h", formatNumber(MorningSleep.draft(context, d))))
+                        setTextColor(R.id.widget_sub, pal.accent.toArgb())
+                        roundButton(R.id.widget_sleep_minus, R.id.widget_sleep_minus_dot, R.id.widget_sleep_minus_text, ACTION_SLEEP_MINUS, 11)
+                        roundButton(R.id.widget_sleep_plus, R.id.widget_sleep_plus_dot, R.id.widget_sleep_plus_text, ACTION_SLEEP_PLUS, 12)
+                        roundButton(R.id.widget_sleep_save, R.id.widget_sleep_save_dot, R.id.widget_sleep_save_text, ACTION_SLEEP_SAVE, 13, strong = true)
+                    } else {
+                        setTextViewText(R.id.widget_title, tr("How did it feel?"))
+                        setTextViewText(R.id.widget_sub, tr("Last night: {0} h", d.entries[today]?.values?.get(Sleep.HOURS) ?: "?"))
+                        val faces = listOf(R.id.widget_face_0, R.id.widget_face_1, R.id.widget_face_2)
+                        faces.forEachIndexed { i, id ->
+                            setInt(id, "setColorFilter", answerColor(i / 2f).toArgb())
+                            setContentDescription(id, tr(Sleep.QUALITY_OPTIONS[i]))
+                            setOnClickPendingIntent(id, broadcast(context, ACTION_SLEEP_FACE + i, 20 + i))
+                        }
+                    }
+                    show(R.id.widget_water, false)
+                    show(R.id.widget_meal, false)
+                    return@apply
+                }
+
+                // ===== usual: quick note, +1 water, +1 meal =====
+                setImageViewResource(R.id.widget_icon, R.drawable.ic_quick_note)
                 setTextViewText(R.id.widget_title, tr("Quick note"))
                 setTextViewText(R.id.widget_sub, tr("How are you right now?"))
-                setOnClickPendingIntent(R.id.widget_root, open)
+                fun count(id: String) = d.entries[today]?.values?.get(id)?.toFloatOrNull()?.toInt() ?: 0
 
-                // the water drop: shown while the water tracker is on
-                val water = waterPoint(Repo.data)
-                val waterOn = water != null && Repo.data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false
-                setViewVisibility(R.id.widget_water, if (waterOn) View.VISIBLE else View.GONE)
-                if (water != null && waterOn) {
-                    val drunk = Repo.data.entries[LocalDate.now().toString()]?.values?.get(water.id)?.toFloatOrNull()?.toInt() ?: 0
-                    setTextViewText(R.id.widget_water_count, "$drunk/${water.goalCups}")
+                val water = waterPoint(d)?.takeIf { d.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false }
+                show(R.id.widget_water, water != null)
+                if (water != null) {
+                    setTextViewText(R.id.widget_water_count, "${count(water.id)}/${water.goalCups}")
                     setTextColor(R.id.widget_water_count, pal.accent.toArgb())
                     setInt(R.id.widget_water_dot, "setColorFilter", pal.accentWash.toArgb())
                     setInt(R.id.widget_water_drop, "setColorFilter", pal.accent.toArgb())
                     setInt(R.id.widget_water_plus, "setColorFilter", pal.onAccent.toArgb())
                     setContentDescription(R.id.widget_water, tr("Add a cup of water"))
-                    val add = PendingIntent.getBroadcast(
-                        context, 1,
-                        Intent(context, QuickNoteWidget::class.java).setAction(ACTION_ADD_WATER),
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    )
-                    setOnClickPendingIntent(R.id.widget_water, add)
+                    setOnClickPendingIntent(R.id.widget_water, broadcast(context, ACTION_ADD_WATER, 1))
+                }
+
+                val meals = mealsPoint(d)?.takeIf { d.sections.firstOrNull { it.id == Sections.MEALS }?.hidden == false }
+                show(R.id.widget_meal, meals != null)
+                if (meals != null) {
+                    setTextViewText(R.id.widget_meal_count, "${count(meals.id)}/${meals.goalMeals}")
+                    setTextColor(R.id.widget_meal_count, pal.accent.toArgb())
+                    setInt(R.id.widget_meal_dot, "setColorFilter", pal.accentWash.toArgb())
+                    setInt(R.id.widget_meal_bowl, "setColorFilter", pal.accent.toArgb())
+                    setInt(R.id.widget_meal_plus, "setColorFilter", pal.onAccent.toArgb())
+                    setContentDescription(R.id.widget_meal, tr("Add a meal"))
+                    setOnClickPendingIntent(R.id.widget_meal, broadcast(context, ACTION_ADD_MEAL, 2))
                 }
             }
         }
 
-        /** Redraws placed widgets, e.g. after the theme changes. */
+        /** Redraws placed widgets, e.g. after the theme changes or something it shows was logged. */
         fun refresh(context: Context) {
             try {
                 val manager = AppWidgetManager.getInstance(context) ?: return
