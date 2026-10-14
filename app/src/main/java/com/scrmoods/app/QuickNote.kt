@@ -278,7 +278,7 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
         try { focus.requestFocus() } catch (_: Exception) {}
     }
 
-    fun close() { Repo.flush(); onDone() } // water taps are saved as they happen
+    fun close() { Repo.flush(); onDone() } // water, meal and pill taps are saved as they happen
 
     fun save() {
         val t = text.trim()
@@ -290,7 +290,19 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
         close()
     }
     val today = LocalDate.now().toString()
-    val water = waterPoint(Repo.data)?.takeIf { Repo.data.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false }
+    val data = Repo.data
+    fun on(section: String) = data.sections.firstOrNull { it.id == section }?.hidden == false
+    val values = data.entries[today]?.values ?: emptyMap()
+    val water = waterPoint(data)?.takeIf { on(Sections.WATER) }
+    val meals = mealsPoint(data)?.takeIf { on(Sections.MEALS) }
+    val meds = if (on(Sections.MEDS)) data.points.filter { it.isPillMed && !it.archived } else emptyList()
+
+    /** A thin line and a small heading between the parts of the sheet. */
+    @Composable
+    fun Part(title: String) {
+        Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(1.dp).background(Rule))
+        Text(title, fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent, modifier = Modifier.padding(top = 12.dp))
+    }
 
     Box(
         Modifier
@@ -312,7 +324,7 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 .pointerInput(Unit) { detectTapGestures { } } // taps on the card stay on the card
                 .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
         ) {
-          // everything but the buttons scrolls, so the water cups below the note can be reached with the keyboard open
+          // everything but the buttons scrolls, so water, meals and medications below the note can be reached with the keyboard open
           Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
             Text(tr("Quick note") + " · $time", fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent)
             Text(
@@ -335,12 +347,16 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp).focusRequester(focus),
             )
             if (water != null) {
-                Box(Modifier.padding(top = 16.dp).fillMaxWidth().height(1.dp).background(Rule))
-                Text(
-                    tr("Water today"), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                WaterTracker(water, Repo.data.entries[today]?.values?.get(water.id), today, 0.dp)
+                Part(tr("Water today"))
+                WaterTracker(water, values[water.id], today, 0.dp)
+            }
+            if (meals != null) {
+                Part(tr("Meals today"))
+                MealsTracker(meals, snacksPoint(data), values, today, 0.dp)
+            }
+            if (meds.isNotEmpty()) {
+                Part(tr("Medications today"))
+                for (p in meds) MedRow(p, values[p.id], 6.dp) { Repo.setValue(today, p.id, it) }
             }
           }
             Row(

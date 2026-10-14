@@ -581,5 +581,7 @@ object RuStrings {
         "Poor" to "Плохо",
         "Good" to "Хорошо",
         "How well did you sleep?" to "Как вы спали?",
+        "Meals today" to "Еда сегодня",
+        "Medications today" to "Лекарства сегодня",
     )
 }
