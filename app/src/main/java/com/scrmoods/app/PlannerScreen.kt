@@ -187,7 +187,7 @@ private fun PlanDay(day: String, onDay: (String) -> Unit, onBack: (() -> Unit)?,
         for (slot in Slot.entries) {
             val mine = intakes.filter { it.slot == slot }
             if (mine.isEmpty()) continue
-            SlotCard(slot, mine, day, canTick = sel <= today, onAdd = { onAdd(slot) })
+            SlotCard(slot, mine, day, canTick = sel <= today)
         }
         Box(Modifier.fillMaxWidth().padding(16.dp)) {
             Button(
@@ -212,12 +212,11 @@ private fun PlanCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SlotCard(slot: Slot, intakes: List<Intake>, day: String, canTick: Boolean, onAdd: () -> Unit) {
+private fun SlotCard(slot: Slot, intakes: List<Intake>, day: String, canTick: Boolean) {
     PlanCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(Repo.data.plan.time(slot), fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Ink)
             Text("  " + slotName(slot).lowercase(Lang.locale), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = InkSoft, modifier = Modifier.weight(1f))
-            Text("+", fontSize = 24.sp, color = Accent, modifier = Modifier.clip(CircleShape).clickable { onAdd() }.padding(horizontal = 12.dp))
         }
         for (i in intakes) IntakeRow(i, day, canTick)
     }
@@ -237,6 +236,13 @@ fun IntakeRow(i: Intake, day: String, canTick: Boolean = true) {
         else -> ""
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        // a small colour mark, the name, the dose, and the tick button on the right
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            Text(i.med.name, fontSize = 17.sp, color = Ink)
+            if (sub.isNotEmpty()) Text(sub, fontSize = 12.5.sp, color = InkSoft)
+        }
+        Text(Plan.dose(i.stage, i.med), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = InkSoft, modifier = Modifier.padding(start = 8.dp, end = 12.dp))
         Box(
             Modifier
                 .then(pop.modifier)
@@ -254,11 +260,6 @@ fun IntakeRow(i: Intake, day: String, canTick: Boolean = true) {
             if (taken) Text("✓", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             else Box(Modifier.size(17.dp).clip(CircleShape).background(Color.White))
         }
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(i.med.name, fontSize = 17.sp, color = Ink)
-            if (sub.isNotEmpty()) Text(sub, fontSize = 12.5.sp, color = InkSoft)
-        }
-        Text(Plan.dose(i.stage, i.med), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = InkSoft, modifier = Modifier.padding(start = 8.dp, end = 4.dp))
     }
 }
 

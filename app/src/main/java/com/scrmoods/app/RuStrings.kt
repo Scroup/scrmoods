@@ -661,5 +661,6 @@ object RuStrings {
         "Morning" to "Утро",
         "Afternoon" to "День",
         "Evening" to "Вечер",
+        "Meds" to "Лекарства",
     )
 }

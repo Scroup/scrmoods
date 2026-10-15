@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class Tab(val label: String) { CHECKIN("Journal"), MEDS("Medications"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Settings") }
+enum class Tab(val label: String) { CHECKIN("Journal"), MEDS("Meds"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Settings") }
 
 private fun Tab.icon(): ImageVector = when (this) {
     Tab.CHECKIN -> Icons.Filled.CheckCircle
@@ -169,7 +169,14 @@ fun App() {
                             selected = tab == t,
                             onClick = { Haptics.tap(); tab = t; planner = null },
                             icon = { Icon(t.icon(), tr(t.label)) },
-                            label = { Text(tr(t.label), fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
+                            // one line always; a little smaller when there are five tabs
+                            label = {
+                                Text(
+                                    tr(t.label), maxLines = 1, softWrap = false,
+                                    fontSize = if (plan.asTab) 11.sp else 12.sp,
+                                    fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal,
+                                )
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Accent,
                                 selectedTextColor = Accent,
