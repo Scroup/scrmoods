@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget. Usually: tap to write a quick note into today's journal; the drop adds a cup of water and the
-     bowl adds a meal, without opening anything. In the morning (until noon), while last night's sleep isn't logged,
+<!-- Home-screen widget. Usually four buttons: a quick note, the to-do list, +1 cup of water and +1 meal
+     (water and meals are added without opening anything), each with a label or count under it. In the morning (until noon), while last night's sleep isn't logged,
      it asks the hours (− / + / ✓) and then how it felt (Poor / OK / Good). Colours are set from the app's theme in code. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
@@ -16,7 +16,193 @@
         android:scaleType="fitXY"
         android:src="@drawable/widget_bg" />
 
+    <!-- ===== usual: four buttons with a label under each ===== -->
     <LinearLayout
+        android:id="@+id/widget_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <LinearLayout
+            android:id="@+id/widget_btn_note"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp">
+
+                <ImageView
+                    android:id="@+id/widget_note_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_note_icon"
+                    android:layout_width="19dp"
+                    android:layout_height="19dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_quick_note" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/widget_note_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#8A6B63"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_btn_todo"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp">
+
+                <ImageView
+                    android:id="@+id/widget_todo_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_todo_icon"
+                    android:layout_width="21dp"
+                    android:layout_height="21dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_todo" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/widget_todo_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#8A6B63"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_water"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp">
+
+                <ImageView
+                    android:id="@+id/widget_water_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_water_drop"
+                    android:layout_width="18dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_drop" />
+                <ImageView
+                    android:id="@+id/widget_water_plus"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="3dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_plus" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/widget_water_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#8A6B63"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_meal"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="38dp"
+                android:layout_height="38dp">
+
+                <ImageView
+                    android:id="@+id/widget_meal_dot"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_dot" />
+
+                <ImageView
+                    android:id="@+id/widget_meal_bowl"
+                    android:layout_width="22dp"
+                    android:layout_height="19dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_meal_bowl" />
+                <ImageView
+                    android:id="@+id/widget_meal_plus"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="5dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_water_plus" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/widget_meal_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="serif"
+                android:maxLines="1"
+                android:textColor="#8A6B63"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ===== morning: last night's sleep ===== -->
+    <LinearLayout
+        android:id="@+id/widget_sleep_row"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center_vertical"
@@ -74,104 +260,6 @@
                 android:textColor="#8A6B63"
                 android:textSize="13sp"
                 android:textStyle="italic" />
-        </LinearLayout>
-
-        <!-- ===== usual mode: +1 cup of water and +1 meal ===== -->
-        <LinearLayout
-            android:id="@+id/widget_water"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="6dp">
-
-            <TextView
-                android:id="@+id/widget_water_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:fontFamily="serif"
-                android:maxLines="1"
-                android:textColor="#A0594F"
-                android:textSize="13sp" />
-
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp">
-
-                <ImageView
-                    android:id="@+id/widget_water_dot"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/widget_dot" />
-
-                <ImageView
-                    android:id="@+id/widget_water_drop"
-                    android:layout_width="19dp"
-                    android:layout_height="23dp"
-                    android:layout_gravity="center"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_water_drop" />
-
-                <ImageView
-                    android:id="@+id/widget_water_plus"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="3dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_water_plus" />
-            </FrameLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/widget_meal"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="8dp">
-
-            <TextView
-                android:id="@+id/widget_meal_count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:fontFamily="serif"
-                android:maxLines="1"
-                android:textColor="#A0594F"
-                android:textSize="13sp" />
-
-            <FrameLayout
-                android:layout_width="38dp"
-                android:layout_height="38dp">
-
-                <ImageView
-                    android:id="@+id/widget_meal_dot"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/widget_dot" />
-
-                <ImageView
-                    android:id="@+id/widget_meal_bowl"
-                    android:layout_width="23dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="1dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_meal_bowl" />
-
-                <ImageView
-                    android:id="@+id/widget_meal_plus"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="6dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_water_plus" />
-            </FrameLayout>
         </LinearLayout>
 
         <!-- ===== morning: the hours ===== -->

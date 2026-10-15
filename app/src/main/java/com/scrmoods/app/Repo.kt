@@ -116,6 +116,28 @@ object Repo {
         it.copy(timedNotes = it.timedNotes.filterIndexed { i, _ -> i != index })
     }
 
+    // ---------- to-do list ----------
+
+    private fun updateTodos(change: (List<Todo>) -> List<Todo>) {
+        update { it.copy(todos = change(it.todos)) }
+        appContext?.let { QuickNoteWidget.refresh(it) } // the widget shows how many are open
+    }
+
+    fun addTodo(text: String) {
+        val t = text.trim()
+        if (t.isEmpty()) return
+        updateTodos { it + Todo(Todos.newId(), t, java.time.LocalDate.now().toString()) }
+    }
+
+    /** Ticks a task off today, or brings it back. */
+    fun toggleTodo(id: String) = updateTodos { list ->
+        list.map { if (it.id == id) it.copy(doneOn = if (it.done) null else java.time.LocalDate.now().toString()) else it }
+    }
+
+    fun deleteTodo(id: String) = updateTodos { list -> list.filter { it.id != id } }
+
+    fun clearDoneTodos() = updateTodos { list -> list.filter { !it.done } }
+
     // ---------- medication planner ----------
 
     fun updatePlan(change: (MedPlan) -> MedPlan) {

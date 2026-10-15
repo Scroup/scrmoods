@@ -146,6 +146,9 @@ fun DataScreen(onManage: () -> Unit) {
         MealsSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
 
         SectionHeader(tr("Little touches"))
+        SettingSwitch(tr("To-do list"), tr("A short list of tasks on today's page: at the top during the day, lower in the evening."), TodoPrefs.enabled) {
+            TodoPrefs.setEnabled(context, it)
+        }
         SettingSwitch(tr("Vibrate on tap"), tr("A soft click of vibration when you tap buttons and answers."), Haptics.enabled) {
             Haptics.setEnabled(context, it)
         }

@@ -71,6 +71,8 @@ data class AppData(
     val entries: Map<String, DayEntry>,
     /** The medication planner (off unless switched on in Settings). */
     val plan: MedPlan = MedPlan(),
+    /** The to-do list. */
+    val todos: List<Todo> = emptyList(),
 )
 
 object Sections {

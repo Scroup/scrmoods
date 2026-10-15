@@ -664,5 +664,14 @@ object RuStrings {
         "Meds" to "Лекарства",
         "Allow exact reminders" to "Разрешить точные напоминания",
         "Without this, Android may deliver reminders a few minutes late. Tap and turn on “Alarms & reminders” for scrmoods." to "Без этого Android может присылать напоминания с опозданием на несколько минут. Нажмите и включите «Будильники и напоминания» для scrmoods.",
+        "A short list of tasks on today's page: at the top during the day, lower in the evening." to "Короткий список дел на странице дня: днём вверху, вечером ниже.",
+        "Add a task…" to "Добавить дело…",
+        "Clear done" to "Убрать выполненные",
+        "Note" to "Заметка",
+        "Nothing to do yet. Add what's on your mind for today." to "Дел пока нет. Запишите, что нужно сделать сегодня.",
+        "To-do" to "Дела",
+        "To-do list" to "Список дел",
+        "What needs doing?" to "Что нужно сделать?",
+        "{0} to do" to "Дел: {0}",
     )
 }

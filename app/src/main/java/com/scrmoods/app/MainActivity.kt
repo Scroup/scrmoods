@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
         Lang.init(applicationContext)
         GoodNight.init(applicationContext)
         Haptics.init(applicationContext)
+        TodoPrefs.init(applicationContext)
         Sparkles.init(applicationContext)
         Intro.init(applicationContext, freshStart = savedInstanceState == null)
         Reminders.ensureChannel(applicationContext)

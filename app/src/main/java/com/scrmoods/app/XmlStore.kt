@@ -82,6 +82,17 @@ object XmlStore {
 
         writePlan(s, data.plan)
 
+        if (data.todos.isNotEmpty()) {
+            nl(s, 1); s.startTag(null, "todos")
+            for (t in data.todos) {
+                nl(s, 2)
+                s.startTag(null, "todo").attribute(null, "id", t.id).attribute(null, "created", t.created)
+                if (t.doneOn != null) s.attribute(null, "done", t.doneOn)
+                s.text(t.text).endTag(null, "todo")
+            }
+            nl(s, 1); s.endTag(null, "todos")
+        }
+
         val pointsById = data.points.associateBy { it.id }
         nl(s, 1); s.startTag(null, "entries")
         for (e in data.entries.values.sortedBy { it.date }) {
@@ -172,6 +183,7 @@ object XmlStore {
         var curValues = linkedMapOf<String, String>()
         var curTimed = mutableListOf<TimedNote>()
         var plan = MedPlan()
+        val todos = mutableListOf<Todo>()
         val planMeds = mutableListOf<PlanMed>()
         var curMed: PlanMed? = null
         var curStages = mutableListOf<PlanStage>()
@@ -206,6 +218,13 @@ object XmlStore {
                         curReminders = mutableListOf()
                     }
                     "option" -> curOptions += p.nextText()
+                    "todo" -> {
+                        val id = p.getAttributeValue(null, "id") ?: Todos.newId()
+                        val created = p.getAttributeValue(null, "created") ?: ""
+                        val done = p.getAttributeValue(null, "done")
+                        val text = p.nextText()
+                        if (text.isNotBlank()) todos += Todo(id, text, created, done)
+                    }
                     "medplan" -> plan = MedPlan(
                         enabled = p.getAttributeValue(null, "enabled") == "true",
                         placement = if (p.getAttributeValue(null, "placement") == "tab") "tab" else "row",
@@ -271,6 +290,6 @@ object XmlStore {
         }
         if (!sawRoot) throw IllegalArgumentException("This is not a scrmoods file")
 
-        return ensureBuiltIns(AppData(sections, points, entries, plan.copy(meds = planMeds.toList())))
+        return ensureBuiltIns(AppData(sections, points, entries, plan.copy(meds = planMeds.toList()), todos.toList()))
     }
 }

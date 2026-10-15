@@ -197,6 +197,13 @@ fun CheckInScreen(
         val moodOn = data.sections.any { it.id == Sections.BIPOLAR && !it.hidden }
         if (planRow && (daytime || !moodOn)) PlanRow(date, Modifier.reveal(order++)) { onPlanner(date) }
 
+        // the to-do list: near the top during the day, lower in the evening (today's page only)
+        val todos = TodoPrefs.enabled && date == LocalDate.now()
+        if (todos && daytime) JournalCard(order = order++) {
+            SectionHeader(tr("To-do"), horizontal = Gutter, top = 16.dp)
+            TodoList(Gutter)
+        }
+
         for (section in sections) {
             if (section.hidden) continue
             if (section.id == Sections.WATER) {
@@ -252,6 +259,11 @@ fun CheckInScreen(
                     }
                 }
             }
+        }
+
+        if (todos && !daytime) JournalCard(order = order++) {
+            SectionHeader(tr("To-do"), horizontal = Gutter, top = 16.dp)
+            TodoList(Gutter)
         }
 
         JournalCard(bottomPadding = 4.dp, order = order) {

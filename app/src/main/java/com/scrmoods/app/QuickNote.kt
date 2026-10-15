@@ -141,20 +141,18 @@ class QuickNoteWidget : AppWidgetProvider() {
             val pal = Themes.current
             val d = Repo.data
             val today = LocalDate.now().toString()
-            val open = PendingIntent.getActivity(
-                context, 0,
+            fun openSheet(mode: String, code: Int) = PendingIntent.getActivity(
+                context, code,
                 Intent(context, QuickNoteActivity::class.java)
+                    .putExtra(QuickNoteActivity.EXTRA_MODE, mode)
+                    .setData(android.net.Uri.parse("scrmoods://widget/$mode"))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             val ask = MorningSleep.askNow(context, d)
             return RemoteViews(context.packageName, R.layout.widget_quick_note).apply {
                 setInt(R.id.widget_bg, "setColorFilter", pal.page.toArgb())
-                setInt(R.id.widget_dot, "setColorFilter", pal.accent.toArgb())
-                setInt(R.id.widget_icon, "setColorFilter", pal.onAccent.toArgb())
-                setTextColor(R.id.widget_title, pal.ink.toArgb())
-                setTextColor(R.id.widget_sub, pal.inkSoft.toArgb())
-                setOnClickPendingIntent(R.id.widget_root, open)
+                setOnClickPendingIntent(R.id.widget_root, openSheet("note", 0))
                 fun show(id: Int, on: Boolean) = setViewVisibility(id, if (on) View.VISIBLE else View.GONE)
                 fun roundButton(frame: Int, dot: Int, text: Int, action: String, code: Int, strong: Boolean = false) {
                     setInt(dot, "setColorFilter", (if (strong) pal.accent else pal.accentWash).toArgb())
@@ -163,13 +161,18 @@ class QuickNoteWidget : AppWidgetProvider() {
                 }
 
                 val morning = ask != MorningSleep.Ask.NONE
-                show(R.id.widget_sleep_hours, ask == MorningSleep.Ask.HOURS)
-                show(R.id.widget_sleep_faces, ask == MorningSleep.Ask.QUALITY)
-                show(R.id.widget_sleep_skip, morning)
+                show(R.id.widget_buttons, !morning)
+                show(R.id.widget_sleep_row, morning)
 
                 if (morning) {
                     // ===== the morning sleep question =====
+                    setInt(R.id.widget_dot, "setColorFilter", pal.accent.toArgb())
+                    setInt(R.id.widget_icon, "setColorFilter", pal.onAccent.toArgb())
                     setImageViewResource(R.id.widget_icon, R.drawable.ic_moon)
+                    setTextColor(R.id.widget_title, pal.ink.toArgb())
+                    setTextColor(R.id.widget_sub, pal.inkSoft.toArgb())
+                    show(R.id.widget_sleep_hours, ask == MorningSleep.Ask.HOURS)
+                    show(R.id.widget_sleep_faces, ask == MorningSleep.Ask.QUALITY)
                     setTextColor(R.id.widget_sleep_skip, pal.inkSoft.toArgb())
                     setOnClickPendingIntent(R.id.widget_sleep_skip, broadcast(context, ACTION_SLEEP_SKIP, 14))
                     setContentDescription(R.id.widget_sleep_skip, tr("Not now"))
@@ -190,24 +193,31 @@ class QuickNoteWidget : AppWidgetProvider() {
                             setOnClickPendingIntent(id, broadcast(context, ACTION_SLEEP_FACE + i, 20 + i))
                         }
                     }
-                    show(R.id.widget_water, false)
-                    show(R.id.widget_meal, false)
                     return@apply
                 }
 
-                // ===== usual: quick note, +1 water, +1 meal =====
-                setImageViewResource(R.id.widget_icon, R.drawable.ic_quick_note)
-                setTextViewText(R.id.widget_title, tr("Quick note"))
-                setTextViewText(R.id.widget_sub, tr("How are you right now?"))
+                // ===== usual: quick note · to-do · +1 water · +1 meal, with a label or count under each =====
+                fun button(dot: Int, icon: Int, label: Int, text: String, strong: Boolean = false) {
+                    setInt(dot, "setColorFilter", (if (strong) pal.accent else pal.accentWash).toArgb())
+                    setInt(icon, "setColorFilter", (if (strong) pal.onAccent else pal.accent).toArgb())
+                    setTextViewText(label, text)
+                    setTextColor(label, (if (strong) pal.accent else pal.inkSoft).toArgb())
+                }
                 fun count(id: String) = d.entries[today]?.values?.get(id)?.toFloatOrNull()?.toInt() ?: 0
+
+                button(R.id.widget_note_dot, R.id.widget_note_icon, R.id.widget_note_label, tr("Note"), strong = true)
+                setContentDescription(R.id.widget_btn_note, tr("Quick note"))
+                setOnClickPendingIntent(R.id.widget_btn_note, openSheet("note", 0))
+
+                val open = Todos.openCount(d.todos)
+                button(R.id.widget_todo_dot, R.id.widget_todo_icon, R.id.widget_todo_count, if (open == 0) tr("To-do") else tr("{0} to do", open))
+                setContentDescription(R.id.widget_btn_todo, tr("To-do"))
+                setOnClickPendingIntent(R.id.widget_btn_todo, openSheet("todo", 3))
 
                 val water = waterPoint(d)?.takeIf { d.sections.firstOrNull { it.id == Sections.WATER }?.hidden == false }
                 show(R.id.widget_water, water != null)
                 if (water != null) {
-                    setTextViewText(R.id.widget_water_count, "${count(water.id)}/${water.goalCups}")
-                    setTextColor(R.id.widget_water_count, pal.accent.toArgb())
-                    setInt(R.id.widget_water_dot, "setColorFilter", pal.accentWash.toArgb())
-                    setInt(R.id.widget_water_drop, "setColorFilter", pal.accent.toArgb())
+                    button(R.id.widget_water_dot, R.id.widget_water_drop, R.id.widget_water_count, "${count(water.id)}/${water.goalCups}")
                     setInt(R.id.widget_water_plus, "setColorFilter", pal.onAccent.toArgb())
                     setContentDescription(R.id.widget_water, tr("Add a cup of water"))
                     setOnClickPendingIntent(R.id.widget_water, broadcast(context, ACTION_ADD_WATER, 1))
@@ -216,10 +226,7 @@ class QuickNoteWidget : AppWidgetProvider() {
                 val meals = mealsPoint(d)?.takeIf { d.sections.firstOrNull { it.id == Sections.MEALS }?.hidden == false }
                 show(R.id.widget_meal, meals != null)
                 if (meals != null) {
-                    setTextViewText(R.id.widget_meal_count, "${count(meals.id)}/${meals.goalMeals}")
-                    setTextColor(R.id.widget_meal_count, pal.accent.toArgb())
-                    setInt(R.id.widget_meal_dot, "setColorFilter", pal.accentWash.toArgb())
-                    setInt(R.id.widget_meal_bowl, "setColorFilter", pal.accent.toArgb())
+                    button(R.id.widget_meal_dot, R.id.widget_meal_bowl, R.id.widget_meal_count, "${count(meals.id)}/${meals.goalMeals}")
                     setInt(R.id.widget_meal_plus, "setColorFilter", pal.onAccent.toArgb())
                     setContentDescription(R.id.widget_meal, tr("Add a meal"))
                     setOnClickPendingIntent(R.id.widget_meal, broadcast(context, ACTION_ADD_MEAL, 2))
@@ -239,8 +246,15 @@ class QuickNoteWidget : AppWidgetProvider() {
     }
 }
 
-/** The small window the widget opens: write a line, and it's added to today's note with the time. */
+/**
+ * The small window the widget opens: a quick note (a line added to today's note with the time),
+ * or the to-do list.
+ */
 class QuickNoteActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_MODE = "mode"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
@@ -248,9 +262,10 @@ class QuickNoteActivity : ComponentActivity() {
         Lang.init(applicationContext)
         Haptics.init(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        val todo = intent?.getStringExtra(EXTRA_MODE) == "todo"
         setContent {
             ScrmoodsTheme {
-                QuickNoteSheet(onDone = { finish() })
+                if (todo) TodoSheet(onDone = { finish() }) else QuickNoteSheet(onDone = { finish() })
             }
         }
     }
@@ -259,6 +274,46 @@ class QuickNoteActivity : ComponentActivity() {
         super.finish()
         @Suppress("DEPRECATION")
         overridePendingTransition(0, android.R.anim.fade_out)
+    }
+}
+
+/** The to-do list on its own, from the widget: add tasks, tick them off, close. */
+@Composable
+private fun TodoSheet(onDone: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    val rise = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { rise.animateTo(1f, tween(380, easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f))) }
+    LaunchedEffect(Unit) { delay(120); try { focus.requestFocus() } catch (_: Exception) {} }
+    fun close() { Repo.flush(); onDone() }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = rise.value }
+            .background(Color(0xFF2A1C17).copy(alpha = 0.35f))
+            .pointerInput(Unit) { detectTapGestures { close() } }
+            .imePadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Column(
+            Modifier
+                .padding(10.dp)
+                .fillMaxWidth()
+                .graphicsLayer { translationY = (1f - rise.value) * 60.dp.toPx() }
+                .clip(RoundedCornerShape(24.dp))
+                .background(Page)
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 14.dp),
+        ) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                Text(tr("To-do"), fontSize = 14.sp, fontStyle = FontStyle.Italic, color = Accent)
+                Text(tr("What needs doing?"), fontSize = 22.sp, fontWeight = FontWeight.Medium, color = Ink, modifier = Modifier.padding(top = 2.dp))
+                TodoList(0.dp, focus)
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.End) {
+                LinkButton(tr("Close")) { close() }
+            }
+        }
     }
 }
 
