@@ -69,6 +69,8 @@ data class AppData(
     val sections: List<Section>,
     val points: List<TrackingPoint>,
     val entries: Map<String, DayEntry>,
+    /** The medication planner (off unless switched on in Settings). */
+    val plan: MedPlan = MedPlan(),
 )
 
 object Sections {

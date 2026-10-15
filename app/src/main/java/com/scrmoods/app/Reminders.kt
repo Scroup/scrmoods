@@ -96,6 +96,8 @@ object Reminders {
         val keys = mutableSetOf<String>()
         for (p in Repo.data.points) {
             if (p.archived) continue
+            // with the planner on, its own reminders replace the simple medications' ones
+            if (Repo.data.plan.enabled && p.sectionId == Sections.MEDS) continue
             for (t in p.reminders.filter(::isValidTime).distinct()) {
                 schedule(ctx, p.id, t)
                 keys += "${p.id}|$t"
@@ -103,6 +105,7 @@ object Reminders {
         }
         prefs.edit().putStringSet(KEY_SCHEDULED, keys).apply()
         SleepNotifier.schedule(ctx) // the morning sleep question rides along (after restarts too)
+        PlanNotifier.schedule(ctx) // and the planner's times of day
     }
 
     fun ensureChannel(context: Context) {

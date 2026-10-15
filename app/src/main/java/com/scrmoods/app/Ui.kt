@@ -189,6 +189,18 @@ val BarChartIcon: ImageVector by lazy {
     }.build()
 }
 
+/** A capsule, for the planner's tab. */
+val PillIcon: ImageVector by lazy {
+    ImageVector.Builder("Pill", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(8f, 7f); lineTo(11.2f, 7f); lineTo(11.2f, 17f); lineTo(8f, 17f)
+            arcTo(5f, 5f, 0f, false, true, 8f, 7f); close()
+            moveTo(12.8f, 7f); lineTo(16f, 7f)
+            arcTo(5f, 5f, 0f, false, true, 16f, 17f); lineTo(12.8f, 17f); close()
+        }
+    }.build()
+}
+
 /**
  * A row of rounded answer pills, e.g. "Not at all · Somewhat · Fairly · Very".
  * Labels always stay on one line: if any label doesn't fit, the text of the whole group shrinks

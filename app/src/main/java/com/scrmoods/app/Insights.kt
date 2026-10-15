@@ -242,7 +242,15 @@ object Insights {
                 day < today && first != null && day.toString() >= first && d.entries[day.toString()]?.values?.isNotEmpty() == true
             }.count { day -> ((value(d, p.id, day) ?: 0f).toInt()) < p.doses }
         }.filter { it.second >= 3 }
-        if (missed.isNotEmpty()) out += Alert(
+        // with the planner on, its courses count instead
+        val missedPlan = if (!d.plan.enabled) emptyList() else d.plan.meds.filter { !it.archived }
+            .map { m -> m.name to Plan.missedDays(d, m, week, today) }.filter { it.second >= 3 }
+        if (missedPlan.isNotEmpty()) out += Alert(
+            "meds_missed", tr("Missed medications"),
+            missedPlan.joinToString(" ") { (name, n) -> tr("{0} wasn't fully taken on {1} {2} this week.", name, n, trp(n, "day", "days")) },
+            tr("If it's hard to keep up, reminders can help, and so can talking to your doctor."),
+        )
+        else if (missed.isNotEmpty()) out += Alert(
             "meds_missed", tr("Missed medications"),
             missed.joinToString(" ") { (p, n) -> tr("{0} wasn't fully taken on {1} {2} this week.", p.title, n, trp(n, "day", "days")) },
             tr("If it's hard to keep up, reminders can help, and so can talking to your doctor."),

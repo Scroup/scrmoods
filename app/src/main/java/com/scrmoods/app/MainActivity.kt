@@ -57,6 +57,11 @@ import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(PlannerNav.EXTRA, false)) PlannerNav.request++
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Repo.init(applicationContext)
@@ -68,6 +73,7 @@ class MainActivity : ComponentActivity() {
         Intro.init(applicationContext, freshStart = savedInstanceState == null)
         Reminders.ensureChannel(applicationContext)
         Reminders.scheduleAll(applicationContext)
+        if (intent?.getBooleanExtra(PlannerNav.EXTRA, false) == true) PlannerNav.request++
         setContent {
             ScrmoodsTheme {
                 // Status and navigation bars take the theme's paper colour.
@@ -93,11 +99,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class Tab(val label: String) { CHECKIN("Journal"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Settings") }
+enum class Tab(val label: String) { CHECKIN("Journal"), MEDS("Medications"), CALENDAR("Calendar"), GRAPH("Trends"), DATA("Settings") }
 
 private fun Tab.icon(): ImageVector = when (this) {
     Tab.CHECKIN -> Icons.Filled.CheckCircle
     Tab.CALENDAR -> Icons.Filled.DateRange
+    Tab.MEDS -> PillIcon
     Tab.GRAPH -> BarChartIcon
     Tab.DATA -> Icons.Filled.Settings
 }
@@ -137,6 +144,17 @@ fun App() {
         }
     }
 
+    // the medication planner: opened from its line in the journal (a date), or its own tab
+    var planner by rememberSaveable { mutableStateOf<String?>(null) }
+    val plan = Repo.data.plan
+    LaunchedEffect(plan.asTab) { if (!plan.asTab && tab == Tab.MEDS) tab = Tab.CHECKIN }
+    LaunchedEffect(PlannerNav.request) {
+        if (PlannerNav.request > 0 && plan.enabled) {
+            manage = false
+            if (plan.asTab) tab = Tab.MEDS else planner = LocalDate.now().toString()
+        }
+    }
+    BackHandler(enabled = planner != null) { planner = null }
     BackHandler(enabled = manage) { manage = false }
     BackHandler(enabled = !manage && tab != Tab.CHECKIN) { tab = Tab.CHECKIN }
 
@@ -146,10 +164,10 @@ fun App() {
             if (!manage) Column {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Rule))
                 NavigationBar(containerColor = Paper, tonalElevation = 0.dp) {
-                    for (t in Tab.entries) {
+                    for (t in Tab.entries.filter { it != Tab.MEDS || plan.asTab }) {
                         NavigationBarItem(
                             selected = tab == t,
-                            onClick = { Haptics.tap(); tab = t },
+                            onClick = { Haptics.tap(); tab = t; planner = null },
                             icon = { Icon(t.icon(), tr(t.label)) },
                             label = { Text(tr(t.label), fontWeight = if (tab == t) FontWeight.Medium else FontWeight.Normal) },
                             colors = NavigationBarItemDefaults.colors(
@@ -168,7 +186,10 @@ fun App() {
         contentColor = Ink,
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            if (manage) {
+            val openPlanner = planner
+            if (openPlanner != null && !manage && tab == Tab.CHECKIN) {
+                PlannerScreen(openPlanner) { planner = null }
+            } else if (manage) {
                 ManageScreen(
                     onBack = { manage = false },
                     onAdd = { editor = EditorRequest(it, null) },
@@ -181,7 +202,9 @@ fun App() {
                     onAddPoint = { editor = EditorRequest(it, null) },
                     onManage = { manage = true },
                     onQuick = { quick = date.toString() },
+                    onPlanner = { planner = it.toString() },
                 )
+                Tab.MEDS -> PlannerScreen(onBack = null)
                 Tab.CALENDAR -> CalendarScreen(date) { date = it; tab = Tab.CHECKIN }
                 Tab.GRAPH -> GraphScreen()
                 Tab.DATA -> DataScreen(onManage = { manage = true })

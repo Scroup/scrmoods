@@ -68,6 +68,7 @@ object Repo {
     /** Answers the home-screen widget shows (today's cups and meals, last night's sleep). */
     private val WIDGET_POINTS = setOf(Water.POINT, Meals.MEALS, Sleep.HOURS, Sleep.QUALITY)
 
+
     fun flush() {
         writer.submit {}.get()
     }
@@ -114,6 +115,38 @@ object Repo {
     fun removeTimedNote(date: String, index: Int) = updateEntry(date) {
         it.copy(timedNotes = it.timedNotes.filterIndexed { i, _ -> i != index })
     }
+
+    // ---------- medication planner ----------
+
+    fun updatePlan(change: (MedPlan) -> MedPlan) {
+        update { it.copy(plan = change(it.plan)) }
+        pointsChanged() // its reminders follow the plan
+    }
+
+    /** Adds or replaces a planned medication. */
+    fun saveMed(m: PlanMed) = updatePlan { p ->
+        p.copy(meds = if (p.meds.any { it.id == m.id }) p.meds.map { if (it.id == m.id) m else it } else p.meds + m)
+    }
+
+    /** Removes a planned medication; the doses already ticked stay in the days' records. */
+    fun deleteMed(id: String) = updatePlan { p -> p.copy(meds = p.meds.filter { it.id != id }) }
+
+    /**
+     * Switches between the simple medication list and the planner. The first time the planner is switched on,
+     * the simple medications are copied into it; the simple list is hidden while the planner is on.
+     */
+    fun setPlanEnabled(on: Boolean, today: String = java.time.LocalDate.now().toString()) {
+        update { d ->
+            val imported = if (on && d.plan.meds.isEmpty()) Plan.importSimple(d, today) else emptyList()
+            d.copy(
+                plan = d.plan.copy(enabled = on, meds = d.plan.meds + imported),
+                sections = d.sections.map { if (it.id == Sections.MEDS) it.copy(hidden = on) else it },
+            )
+        }
+        pointsChanged()
+    }
+
+    fun tick(date: String, i: Intake, on: Boolean) = setValue(date, i.key, if (on) "1" else null)
 
     // ---------- tracking points ----------
 

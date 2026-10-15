@@ -354,7 +354,13 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 Part(tr("Meals today"))
                 MealsTracker(meals, snacksPoint(data), values, today, 0.dp)
             }
-            if (meds.isNotEmpty()) {
+            if (data.plan.enabled) {
+                // the planner: today's doses by time of day
+                if (Plan.intakes(data.plan, today).isNotEmpty()) {
+                    Part(tr("Medications today"))
+                    PlanTodayList()
+                }
+            } else if (meds.isNotEmpty()) {
                 Part(tr("Medications today"))
                 for (p in meds) MedRow(p, values[p.id], 6.dp) { Repo.setValue(today, p.id, it) }
             }

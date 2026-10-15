@@ -132,6 +132,9 @@ fun DataScreen(onManage: () -> Unit) {
             )
         }
 
+        SectionHeader(tr("Medications"))
+        MedsSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
+
         SectionHeader(tr("Water"))
         WaterSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
 

@@ -80,6 +80,8 @@ object XmlStore {
         }
         nl(s, 1); s.endTag(null, "points")
 
+        writePlan(s, data.plan)
+
         val pointsById = data.points.associateBy { it.id }
         nl(s, 1); s.startTag(null, "entries")
         for (e in data.entries.values.sortedBy { it.date }) {
@@ -112,6 +114,43 @@ object XmlStore {
         s.flush()
     }
 
+    private fun writePlan(s: org.xmlpull.v1.XmlSerializer, plan: MedPlan) {
+        if (!plan.enabled && plan.meds.isEmpty()) return
+        nl(s, 1); s.startTag(null, "medplan")
+        s.attribute(null, "enabled", plan.enabled.toString())
+        s.attribute(null, "placement", plan.placement)
+        s.attribute(null, "morning", plan.time(Slot.MORNING))
+        s.attribute(null, "noon", plan.time(Slot.NOON))
+        s.attribute(null, "evening", plan.time(Slot.EVENING))
+        s.attribute(null, "repeat", plan.repeat.toString())
+        for (m in plan.meds) {
+            nl(s, 2)
+            s.startTag(null, "med")
+            s.attribute(null, "id", m.id)
+            s.attribute(null, "name", m.name)
+            s.attribute(null, "unit", m.unit)
+            s.attribute(null, "color", String.format("#%06X", m.color and 0xFFFFFF))
+            s.attribute(null, "remind", m.remind.toString())
+            s.attribute(null, "archived", m.archived.toString())
+            for (st in m.stages) {
+                nl(s, 3)
+                s.startTag(null, "stage")
+                s.attribute(null, "dose", formatNumberPrecise(st.dose))
+                s.attribute(null, "from", st.from)
+                if (st.to != null) s.attribute(null, "to", st.to)
+                s.attribute(null, "slots", Slot.entries.filter { it in st.slots }.joinToString(",") { it.code })
+                s.endTag(null, "stage")
+            }
+            if (m.stages.isNotEmpty()) nl(s, 2)
+            s.endTag(null, "med")
+        }
+        nl(s, 1); s.endTag(null, "medplan")
+    }
+
+    /** 0.25 stays "0.25" (formatNumber would round it to one decimal). */
+    private fun formatNumberPrecise(f: Float): String =
+        if (f == f.toLong().toFloat()) f.toLong().toString() else java.math.BigDecimal(f.toDouble()).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+
     private fun nl(s: org.xmlpull.v1.XmlSerializer, depth: Int) {
         s.text("\n" + "  ".repeat(depth))
     }
@@ -132,6 +171,10 @@ object XmlStore {
         var curEntry: DayEntry? = null
         var curValues = linkedMapOf<String, String>()
         var curTimed = mutableListOf<TimedNote>()
+        var plan = MedPlan()
+        val planMeds = mutableListOf<PlanMed>()
+        var curMed: PlanMed? = null
+        var curStages = mutableListOf<PlanStage>()
 
         var event = p.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -163,6 +206,32 @@ object XmlStore {
                         curReminders = mutableListOf()
                     }
                     "option" -> curOptions += p.nextText()
+                    "medplan" -> plan = MedPlan(
+                        enabled = p.getAttributeValue(null, "enabled") == "true",
+                        placement = if (p.getAttributeValue(null, "placement") == "tab") "tab" else "row",
+                        times = Slot.entries.associateWith { s ->
+                            p.getAttributeValue(null, when (s) { Slot.MORNING -> "morning"; Slot.NOON -> "noon"; Slot.EVENING -> "evening" })
+                                ?.takeIf(Reminders::isValidTime) ?: s.defaultTime
+                        },
+                        repeat = p.getAttributeValue(null, "repeat") != "false",
+                    )
+                    "med" -> {
+                        curMed = PlanMed(
+                            id = p.getAttributeValue(null, "id") ?: Plan.newId(),
+                            name = p.getAttributeValue(null, "name") ?: "",
+                            unit = p.getAttributeValue(null, "unit") ?: "tab",
+                            color = p.getAttributeValue(null, "color")?.removePrefix("#")?.toLongOrNull(16)?.let { it or 0xFF000000L } ?: MedPlanColors.first(),
+                            remind = p.getAttributeValue(null, "remind") != "false",
+                            archived = p.getAttributeValue(null, "archived") == "true",
+                        )
+                        curStages = mutableListOf()
+                    }
+                    "stage" -> {
+                        val from = p.getAttributeValue(null, "from")
+                        val dose = p.getAttributeValue(null, "dose")?.toFloatOrNull()
+                        val slots = (p.getAttributeValue(null, "slots") ?: "").split(",").mapNotNull { Slot.of(it.trim()) }.toSet()
+                        if (from != null && dose != null) curStages += PlanStage(dose, from, p.getAttributeValue(null, "to"), slots)
+                    }
                     "reminder" -> p.getAttributeValue(null, "time")?.let { if (Reminders.isValidTime(it)) curReminders += it }
                     "entry" -> {
                         curEntry = DayEntry(p.getAttributeValue(null, "date") ?: "")
@@ -181,6 +250,10 @@ object XmlStore {
                     }
                 }
                 XmlPullParser.END_TAG -> when (p.name) {
+                    "med" -> {
+                        curMed?.let { planMeds += it.copy(stages = curStages.sortedBy { s -> s.from }) }
+                        curMed = null
+                    }
                     "point" -> {
                         curPoint?.let { if (it.id.isNotEmpty()) points += it.copy(options = curOptions.toList(), reminders = curReminders.toList()) }
                         curPoint = null
@@ -198,6 +271,6 @@ object XmlStore {
         }
         if (!sawRoot) throw IllegalArgumentException("This is not a scrmoods file")
 
-        return ensureBuiltIns(AppData(sections, points, entries))
+        return ensureBuiltIns(AppData(sections, points, entries, plan.copy(meds = planMeds.toList())))
     }
 }

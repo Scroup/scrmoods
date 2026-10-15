@@ -156,6 +156,7 @@ fun CheckInScreen(
     onAddPoint: (sectionId: String) -> Unit,
     onManage: () -> Unit,
     onQuick: () -> Unit = {},
+    onPlanner: (LocalDate) -> Unit = {},
 ) {
     val data = Repo.data
     val key = date.toString()
@@ -191,6 +192,11 @@ fun CheckInScreen(
         }
         var order = 4 // cards rise in one after another when the app opens
 
+        // the medication planner as one line: under the mood scale (or first, during the day / without the mood scale)
+        val planRow = data.plan.asRow
+        val moodOn = data.sections.any { it.id == Sections.BIPOLAR && !it.hidden }
+        if (planRow && (daytime || !moodOn)) PlanRow(date, Modifier.reveal(order++)) { onPlanner(date) }
+
         for (section in sections) {
             if (section.hidden) continue
             if (section.id == Sections.WATER) {
@@ -224,6 +230,7 @@ fun CheckInScreen(
                         onMixedChange = { Repo.setValue(key, MoodPoints.MIXED, it) },
                     )
                 }
+                if (planRow && !daytime) PlanRow(date, Modifier.reveal(order++)) { onPlanner(date) }
                 continue
             }
             val points = data.points.filter { it.sectionId == section.id && !it.archived }
