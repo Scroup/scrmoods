@@ -54,6 +54,9 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
@@ -112,6 +115,7 @@ private fun Tab.icon(): ImageVector = when (this) {
 /** Which point editor dialog is open: a new point for [sectionId], or editing [existing]. */
 private data class EditorRequest(val sectionId: String, val existing: TrackingPoint?)
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun App() {
     var tab by rememberSaveable { mutableStateOf(Tab.CHECKIN) }
@@ -192,7 +196,8 @@ fun App() {
         containerColor = Paper,
         contentColor = Ink,
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
+        // the app draws edge to edge (Android 15+): keep content clear of the keyboard as well as the bars
+        Box(Modifier.padding(pad).consumeWindowInsets(pad).imePadding().fillMaxSize()) {
             val openPlanner = planner
             if (openPlanner != null && !manage && tab == Tab.CHECKIN) {
                 PlannerScreen(openPlanner) { planner = null }
@@ -249,7 +254,7 @@ fun App() {
 @Composable
 private fun TopBar() {
     Row(
-        Modifier.fillMaxWidth().background(Paper).height(56.dp).padding(start = 24.dp, end = 8.dp),
+        Modifier.fillMaxWidth().background(Paper).statusBarsPadding().height(56.dp).padding(start = 24.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

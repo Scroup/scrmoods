@@ -62,6 +62,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -141,6 +146,7 @@ fun QuickCheckIn(date: String, onClose: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Paper)
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime)) // clear of the bars and the keyboard
             .pointerInput(Unit) { detectTapGestures { } }, // keeps taps off the journal underneath
     ) {
         // top: close, progress, skip

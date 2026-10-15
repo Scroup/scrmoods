@@ -662,5 +662,7 @@ object RuStrings {
         "Afternoon" to "День",
         "Evening" to "Вечер",
         "Meds" to "Лекарства",
+        "Allow exact reminders" to "Разрешить точные напоминания",
+        "Without this, Android may deliver reminders a few minutes late. Tap and turn on “Alarms & reminders” for scrmoods." to "Без этого Android может присылать напоминания с опозданием на несколько минут. Нажмите и включите «Будильники и напоминания» для scrmoods.",
     )
 }

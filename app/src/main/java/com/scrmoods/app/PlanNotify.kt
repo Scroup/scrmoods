@@ -248,3 +248,33 @@ private fun Choice(title: String, description: String, selected: Boolean, onClic
         }
     }
 }
+
+/**
+ * When reminders are set but Android doesn't allow exact alarms (the Google Play version on Android 14+ until the
+ * person allows "Alarms & reminders"), a line that opens that setting. Reminders still come without it, a bit late.
+ */
+@Composable
+fun ExactAlarmHint() {
+    val context = LocalContext.current
+    var bump by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) bump++ }
+        lifecycle.lifecycle.addObserver(obs)
+        onDispose { lifecycle.lifecycle.removeObserver(obs) }
+    }
+    val d = Repo.data
+    val wanted = (d.plan.enabled && d.plan.meds.any { it.remind }) || d.points.any { it.reminders.isNotEmpty() && !it.archived } || SleepNotifier.enabled(context)
+    if (bump < 0 || !wanted || Reminders.canExact(context)) return
+    Column(
+        Modifier.fillMaxWidth().clickable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context.startActivity(
+                Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.padding(horizontal = 20.dp, vertical = 10.dp),
+    ) {
+        Text(tr("Allow exact reminders"), fontSize = 16.sp, color = Accent)
+        Text(tr("Without this, Android may deliver reminders a few minutes late. Tap and turn on “Alarms & reminders” for scrmoods."), fontSize = 13.sp, lineHeight = 18.sp, fontStyle = FontStyle.Italic, color = InkSoft)
+    }
+}

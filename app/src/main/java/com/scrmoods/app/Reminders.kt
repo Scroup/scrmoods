@@ -117,6 +117,12 @@ object Reminders {
         nm.createNotificationChannel(ch)
     }
 
+    /** Whether reminders can ring at the exact minute (Android 12+ asks the person to allow "Alarms & reminders"). */
+    fun canExact(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() ?: true
+    }
+
     fun canNotify(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED

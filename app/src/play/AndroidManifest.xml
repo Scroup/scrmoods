@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Google Play version: Google Play updates it, so it has no self-update and no internet access at all.
+     Exact reminders need the "Alarms & reminders" permission, which the person allows in the phone's settings;
+     without it, reminders still come, just possibly a few minutes late. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+</manifest>

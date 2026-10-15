@@ -134,6 +134,7 @@ fun DataScreen(onManage: () -> Unit) {
 
         SectionHeader(tr("Medications"))
         MedsSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
+        ExactAlarmHint()
 
         SectionHeader(tr("Water"))
         WaterSettings { title, desc, checked, onChange -> SettingSwitch(title, desc, checked, onChange) }
@@ -166,7 +167,7 @@ fun DataScreen(onManage: () -> Unit) {
             }
         }
 
-        UpdateSection()
+        if (BuildConfig.SELF_UPDATE) UpdateSection() // the Google Play version is updated by Google Play
 
         SectionHeader(tr("Your journal"))
         Column(Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) {

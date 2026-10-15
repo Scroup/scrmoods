@@ -5,12 +5,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-
-    <!-- Updating the app from its GitHub release -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Exact-alarm permissions and the GitHub self-update live in src/github and src/play (they differ per store) -->
 
     <application
         android:allowBackup="true"
@@ -51,17 +46,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/quick_note_widget" />
         </receiver>
-
-        <!-- Hands the downloaded update to Android's installer -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.files"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
 
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <!-- The morning sleep question (notification reply and Poor / OK / Good) -->
