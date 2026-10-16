@@ -166,6 +166,14 @@ object XmlStore {
         s.text("\n" + "  ".repeat(depth))
     }
 
+    /** Largest file we read (a decade of daily entries is well under 5 MB). */
+    const val MAX_BYTES = 20L * 1024 * 1024
+    private const val MAX_DOSE = 1000f
+
+    /** A real calendar date written as yyyy-MM-dd. */
+    fun isIsoDate(s: String): Boolean =
+        s.length == 10 && runCatching { java.time.LocalDate.parse(s) }.isSuccess
+
     fun read(input: InputStream): AppData {
         val p = Xml.newPullParser()
         p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
@@ -204,9 +212,9 @@ object XmlStore {
                             sectionId = p.getAttributeValue(null, "section") ?: Sections.CUSTOM,
                             type = PointType.fromXml(p.getAttributeValue(null, "type")),
                             label = p.getAttributeValue(null, "label") ?: "",
-                            min = p.getAttributeValue(null, "min")?.toFloatOrNull() ?: 0f,
-                            max = p.getAttributeValue(null, "max")?.toFloatOrNull() ?: 10f,
-                            step = p.getAttributeValue(null, "step")?.toFloatOrNull() ?: 1f,
+                            min = p.getAttributeValue(null, "min")?.toFloatOrNull()?.takeIf { it.isFinite() } ?: 0f,
+                            max = p.getAttributeValue(null, "max")?.toFloatOrNull()?.takeIf { it.isFinite() } ?: 10f,
+                            step = p.getAttributeValue(null, "step")?.toFloatOrNull()?.takeIf { it.isFinite() && it > 0f } ?: 1f,
                             unit = p.getAttributeValue(null, "unit") ?: "",
                             archived = p.getAttributeValue(null, "archived") == "true",
                         )
@@ -246,14 +254,17 @@ object XmlStore {
                         curStages = mutableListOf()
                     }
                     "stage" -> {
-                        val from = p.getAttributeValue(null, "from")
-                        val dose = p.getAttributeValue(null, "dose")?.toFloatOrNull()
+                        // dates are parsed all over the planner and its alarms: a bad one would crash them, so drop it here
+                        val from = p.getAttributeValue(null, "from")?.takeIf(::isIsoDate)
+                        val to = p.getAttributeValue(null, "to")?.takeIf(::isIsoDate)
+                        val dose = p.getAttributeValue(null, "dose")?.toFloatOrNull()?.takeIf { it.isFinite() && it > 0f && it <= MAX_DOSE }
                         val slots = (p.getAttributeValue(null, "slots") ?: "").split(",").mapNotNull { Slot.of(it.trim()) }.toSet()
-                        if (from != null && dose != null) curStages += PlanStage(dose, from, p.getAttributeValue(null, "to"), slots)
+                        if (from != null && dose != null && (to == null || to >= from)) curStages += PlanStage(dose, from, to, slots)
                     }
                     "reminder" -> p.getAttributeValue(null, "time")?.let { if (Reminders.isValidTime(it)) curReminders += it }
                     "entry" -> {
-                        curEntry = DayEntry(p.getAttributeValue(null, "date") ?: "")
+                        // a day that isn't a real yyyy-MM-dd date is skipped (the calendar and summaries parse it)
+                        curEntry = DayEntry(p.getAttributeValue(null, "date")?.takeIf(::isIsoDate) ?: "")
                         curValues = linkedMapOf()
                         curTimed = mutableListOf()
                     }

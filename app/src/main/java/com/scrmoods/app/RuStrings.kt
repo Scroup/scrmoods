@@ -673,5 +673,11 @@ object RuStrings {
         "To-do list" to "Список дел",
         "What needs doing?" to "Что нужно сделать?",
         "{0} to do" to "Дел: {0}",
+        "Problem saving data" to "Не удалось сохранить данные",
+        "Could not save your data ({0}). Free up some space and export a copy." to "Не удалось сохранить данные ({0}). Освободите место на телефоне и сделайте экспорт.",
+        "Download failed (HTTP {0})." to "Не удалось скачать (HTTP {0}).",
+        "The downloaded file isn't a scrmoods update." to "Скачанный файл — не обновление scrmoods.",
+        "Couldn't open the file." to "Не удалось открыть файл.",
+        "The file is too large." to "Файл слишком большой.",
     )
 }

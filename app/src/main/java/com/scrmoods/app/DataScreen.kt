@@ -45,20 +45,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun DataScreen(onManage: () -> Unit) {
     val context = LocalContext.current
     val data = Repo.data
     var pendingImport by remember { mutableStateOf<Uri?>(null) }
+    // file work runs off the main thread: the chosen file may live in Google Drive, and a slow read would freeze the app
+    val scope = rememberCoroutineScope()
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/xml")) { uri ->
         if (uri != null) {
-            try {
-                context.contentResolver.openOutputStream(uri, "wt")?.use { Repo.export(it) }
-                Toast.makeText(context, tr("Exported"), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, tr("Export failed: {0}", e.message), Toast.LENGTH_LONG).show()
+            val snapshot = Repo.data
+            scope.launch {
+                val error = withContext(Dispatchers.IO) {
+                    runCatching { context.contentResolver.openOutputStream(uri, "wt")?.use { XmlStore.write(snapshot, it) } }.exceptionOrNull()
+                }
+                if (error == null) Toast.makeText(context, tr("Exported"), Toast.LENGTH_SHORT).show()
+                else Toast.makeText(context, tr("Export failed: {0}", error.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -226,11 +234,24 @@ fun DataScreen(onManage: () -> Unit) {
             onDismiss = { pendingImport = null },
             onConfirm = {
                 pendingImport = null
-                try {
-                    context.contentResolver.openInputStream(uri)?.use { Repo.import(it) }
-                    Toast.makeText(context, tr("Imported {0} {1}", Repo.data.entries.size, trp(Repo.data.entries.size, "day", "days")), Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(context, tr("Import failed: {0}", e.message), Toast.LENGTH_LONG).show()
+                scope.launch {
+                    val read = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val input = context.contentResolver.openInputStream(uri) ?: error(tr("Couldn't open the file."))
+                            input.use {
+                                // a huge file would run out of memory: refuse it before parsing
+                                val bytes = it.readNBytesCompat(XmlStore.MAX_BYTES + 1)
+                                if (bytes.size > XmlStore.MAX_BYTES) error(tr("The file is too large."))
+                                XmlStore.read(bytes.inputStream())
+                            }
+                        }
+                    }
+                    read.onSuccess { d ->
+                        Repo.replaceAll(d)
+                        Toast.makeText(context, tr("Imported {0} {1}", d.entries.size, trp(d.entries.size, "day", "days")), Toast.LENGTH_SHORT).show()
+                    }.onFailure { e ->
+                        Toast.makeText(context, tr("Import failed: {0}", e.message), Toast.LENGTH_LONG).show()
+                    }
                 }
             },
         )
@@ -316,4 +337,18 @@ private fun SettingSwitch(title: String, description: String, checked: Boolean, 
             ),
         )
     }
+}
+
+/** Reads at most [limit] bytes (InputStream.readNBytes needs Android 13). */
+private fun java.io.InputStream.readNBytesCompat(limit: Long): ByteArray {
+    val out = java.io.ByteArrayOutputStream()
+    val buf = ByteArray(64 * 1024)
+    var total = 0L
+    while (total < limit) {
+        val n = read(buf, 0, minOf(buf.size.toLong(), limit - total).toInt())
+        if (n < 0) break
+        out.write(buf, 0, n)
+        total += n
+    }
+    return out.toByteArray()
 }

@@ -77,50 +77,10 @@ class QuickNoteWidget : AppWidgetProvider() {
         manager.updateAppWidget(ids, views(context))
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action ?: return super.onReceive(context, intent)
-        if (!action.startsWith(PREFIX)) return super.onReceive(context, intent)
-        val app = context.applicationContext
-        val pending = goAsync()
-        Thread {
-            try {
-                Repo.init(app)
-                Lang.init(app)
-                Haptics.init(app)
-                Haptics.tap()
-                val today = LocalDate.now().toString()
-                fun count(id: String) = Repo.data.entries[today]?.values?.get(id)?.toFloatOrNull()?.toInt() ?: 0
-                fun toast(msg: String) = Handler(Looper.getMainLooper()).post { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
-                when (action) {
-                    ACTION_ADD_WATER -> waterPoint(Repo.data)?.let { p ->
-                        val n = count(p.id) + 1
-                        Repo.setValue(today, p.id, n.toString())
-                        toast(if (n == p.goalCups) tr("Goal reached. Well done!") else tr("+1 cup · {0} of {1}", n, p.goalCups))
-                    }
-                    ACTION_ADD_MEAL -> mealsPoint(Repo.data)?.let { p ->
-                        val n = count(p.id) + 1
-                        Repo.setValue(today, p.id, n.toString())
-                        toast(if (n == p.goalMeals) tr("All your meals are in. Nicely done!") else tr("+1 meal · {0} of {1}", n, p.goalMeals))
-                    }
-                    ACTION_SLEEP_MINUS, ACTION_SLEEP_PLUS ->
-                        MorningSleep.setDraft(app, MorningSleep.draft(app, Repo.data) + if (action == ACTION_SLEEP_PLUS) 0.5f else -0.5f)
-                    ACTION_SLEEP_SAVE -> MorningSleep.saveHours(MorningSleep.draft(app, Repo.data))
-                    ACTION_SLEEP_SKIP -> MorningSleep.skip(app)
-                    else -> if (action.startsWith(ACTION_SLEEP_FACE)) {
-                        MorningSleep.saveQuality(action.removePrefix(ACTION_SLEEP_FACE).toIntOrNull() ?: 1)
-                        toast(tr("Thanks! Have a good day."))
-                    }
-                }
-                Repo.flush()
-                refresh(app)
-            } finally {
-                pending.finish()
-            }
-        }.start()
-    }
-
+    // The widget's buttons (+1 water, +1 meal, the morning sleep question) go to WidgetActionReceiver, which is not
+    // exported: this provider has to be exported for the launcher, so it would otherwise take these actions from any app.
     companion object {
-        private const val PREFIX = "com.scrmoods.app.W_"
+        internal const val PREFIX = "com.scrmoods.app.W_"
         const val ACTION_ADD_WATER = PREFIX + "ADD_WATER"
         const val ACTION_ADD_MEAL = PREFIX + "ADD_MEAL"
         const val ACTION_SLEEP_MINUS = PREFIX + "SLEEP_MINUS"
@@ -130,7 +90,7 @@ class QuickNoteWidget : AppWidgetProvider() {
         const val ACTION_SLEEP_FACE = PREFIX + "SLEEP_FACE_"
 
         private fun broadcast(context: Context, action: String, code: Int) = PendingIntent.getBroadcast(
-            context, code, Intent(context, QuickNoteWidget::class.java).setAction(action),
+            context, code, Intent(context, WidgetActionReceiver::class.java).setAction(action),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
@@ -437,5 +397,53 @@ private fun QuickNoteSheet(onDone: () -> Unit) {
                 ) { Text(tr("Save to today"), fontSize = 15.sp) }
             }
         }
+    }
+}
+
+/**
+ * Handles taps on the widget's buttons. Not exported (see AndroidManifest.xml), so only the widget's own
+ * PendingIntents can reach it: another app can't add cups or log sleep.
+ */
+class WidgetActionReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action ?: return
+        if (!action.startsWith(QuickNoteWidget.PREFIX)) return
+        val app = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                Repo.init(app)
+                Lang.init(app)
+                Haptics.init(app)
+                Haptics.tap()
+                val today = LocalDate.now().toString()
+                fun toast(msg: String) = Handler(Looper.getMainLooper()).post { Toast.makeText(app, msg, Toast.LENGTH_SHORT).show() }
+                when (action) {
+                    QuickNoteWidget.ACTION_ADD_WATER -> waterPoint(Repo.data)?.let { p ->
+                        val n = Repo.increment(today, p.id) // atomic: two quick taps count as two cups
+                        toast(if (n == p.goalCups) tr("Goal reached. Well done!") else tr("+1 cup · {0} of {1}", n, p.goalCups))
+                    }
+                    QuickNoteWidget.ACTION_ADD_MEAL -> mealsPoint(Repo.data)?.let { p ->
+                        val n = Repo.increment(today, p.id)
+                        toast(if (n == p.goalMeals) tr("All your meals are in. Nicely done!") else tr("+1 meal · {0} of {1}", n, p.goalMeals))
+                    }
+                    QuickNoteWidget.ACTION_SLEEP_MINUS, QuickNoteWidget.ACTION_SLEEP_PLUS ->
+                        MorningSleep.setDraft(app, MorningSleep.draft(app, Repo.data) + if (action == QuickNoteWidget.ACTION_SLEEP_PLUS) 0.5f else -0.5f)
+                    QuickNoteWidget.ACTION_SLEEP_SAVE -> MorningSleep.saveHours(MorningSleep.draft(app, Repo.data))
+                    QuickNoteWidget.ACTION_SLEEP_SKIP -> MorningSleep.skip(app)
+                    else -> if (action.startsWith(QuickNoteWidget.ACTION_SLEEP_FACE)) {
+                        MorningSleep.saveQuality(action.removePrefix(QuickNoteWidget.ACTION_SLEEP_FACE).toIntOrNull() ?: 1)
+                        toast(tr("Thanks! Have a good day."))
+                    }
+                }
+                Repo.flush()
+                QuickNoteWidget.refresh(app)
+            } catch (e: Exception) {
+                // a bad saved value must not crash the app from the home screen
+                android.util.Log.e("scrmoods", "Widget action $action failed", e)
+            } finally {
+                pending.finish()
+            }
+        }.start()
     }
 }

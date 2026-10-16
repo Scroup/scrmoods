@@ -186,6 +186,9 @@ class PlanReceiver : BroadcastReceiver() {
                     }
                     PlanNotifier.ACTION_SNOOZE -> { PlanNotifier.later(app, slot, 15); PlanNotifier.cancel(app, slot) }
                 }
+            } catch (e: Exception) {
+                // never let one bad value crash the app from a notification or alarm
+                android.util.Log.e("scrmoods", "Receiver failed: ${intent.action}", e)
             } finally {
                 pending.finish()
             }

@@ -645,7 +645,9 @@ private fun MealsChart(p: TrackingPoint, snacks: TrackingPoint?, days: List<Loca
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp),
     )
     val window = if (days.size >= 30) days else (29 downTo 0).map { days.last().minusDays(it.toLong()) }
-    Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Meals.MEALS }?.let {
+    // cached: findings correlate every question with every day, and this card recomposes often
+    val finding = remember(Repo.data, window, Lang.code) { Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Meals.MEALS } }
+    finding?.let {
         Text(it.sentence + (it.advice?.let { a -> " $a" } ?: ""), fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
     }
 }
@@ -705,7 +707,9 @@ private fun WaterChart(p: TrackingPoint, days: List<LocalDate>) {
     )
     // how water went with your days (at least the last 30 days, so there's enough to compare)
     val window = if (days.size >= 30) days else (29 downTo 0).map { days.last().minusDays(it.toLong()) }
-    Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Water.POINT }?.let {
+    // cached: findings correlate every question with every day, and this card recomposes often
+    val finding = remember(Repo.data, window, Lang.code) { Insights.findings(Repo.data, window, max = 20).firstOrNull { it.point.id == Water.POINT } }
+    finding?.let {
         Text(it.sentence + (it.advice?.let { a -> " $a" } ?: ""), fontSize = 13.5.sp, color = Ink, lineHeight = 19.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 6.dp))
     }
 }

@@ -66,6 +66,7 @@ object Updater {
 
     /** Asks GitHub which build the latest release is ("scrmoods build 45" → 45). */
     fun check() {
+        if (phase == Phase.CHECKING || phase == Phase.DOWNLOADING) return // one request at a time
         phase = Phase.CHECKING
         error = null
         thread(name = "update-check") {
@@ -74,7 +75,10 @@ object Updater {
                 c.setRequestProperty("Accept", "application/vnd.github+json")
                 c.connectTimeout = 15000
                 c.readTimeout = 15000
-                val body = c.inputStream.bufferedReader().use { it.readText() }
+                val body = try {
+                    if (c.responseCode != HttpURLConnection.HTTP_OK) throw IllegalStateException("HTTP ${c.responseCode}")
+                    c.inputStream.bufferedReader().use { it.readText() }
+                } finally { c.disconnect() }
                 val n = Regex("\"name\"\\s*:\\s*\"scrmoods build (\\d+)\"").find(body)?.groupValues?.get(1)?.toIntOrNull()
                 main.post { latestBuild = n; phase = Phase.CHECKED }
             } catch (e: Exception) {
@@ -85,6 +89,8 @@ object Updater {
 
     /** Downloads the latest APK into the app's cache, then opens the installer. */
     fun download(context: Context) {
+        // a second tap while downloading would start another thread writing the same file
+        if (phase == Phase.DOWNLOADING) return
         val app = context.applicationContext
         phase = Phase.DOWNLOADING
         progress = 0
@@ -97,8 +103,10 @@ object Updater {
                 c.instanceFollowRedirects = true
                 c.connectTimeout = 20000
                 c.readTimeout = 30000
+                // an error page (404, rate limit…) must not be saved as the APK
+                if (c.responseCode != HttpURLConnection.HTTP_OK) throw IllegalStateException(tr("Download failed (HTTP {0}).", c.responseCode))
                 val total = c.contentLengthLong
-                c.inputStream.use { input ->
+                try { c.inputStream.use { input ->
                     part.outputStream().use { out ->
                         val buf = ByteArray(64 * 1024)
                         var done = 0L
@@ -114,14 +122,42 @@ object Updater {
                             }
                         }
                     }
-                }
-                if (part.length() < 100_000) throw IllegalStateException(tr("The download looks incomplete."))
+                } } finally { c.disconnect() }
+                if (part.length() < 100_000 || (total > 0 && part.length() != total)) throw IllegalStateException(tr("The download looks incomplete."))
                 target.delete()
                 part.renameTo(target)
+                // checked under its .apk name (older Android versions only parse files that end in .apk)
+                if (!isOurUpdate(app, target)) { target.delete(); throw IllegalStateException(tr("The downloaded file isn't a scrmoods update.")) }
                 main.post { phase = Phase.READY; install(app) }
             } catch (e: Exception) {
                 main.post { error = e.message; phase = Phase.FAILED }
             }
+        }
+    }
+
+    /**
+     * Checks the downloaded APK before handing it to the installer: same package name and, on Android 9+, signed with
+     * the same certificate as the installed app. Android's installer refuses a differently signed update anyway; this
+     * catches a broken or wrong file early with a clear message instead of a confusing installer error.
+     */
+    private fun isOurUpdate(context: Context, apk: File): Boolean {
+        val pm = context.packageManager
+        return try {
+            if (Build.VERSION.SDK_INT >= 28) {
+                val flags = android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                val archive = pm.getPackageArchiveInfo(apk.absolutePath, flags) ?: return false
+                if (archive.packageName != context.packageName) return false
+                val installed = pm.getPackageInfo(context.packageName, flags)
+                val mine = installed.signingInfo?.apkContentsSigners?.map { it.toByteArray().contentHashCode() }?.toSet().orEmpty()
+                val theirs = archive.signingInfo?.apkContentsSigners?.map { it.toByteArray().contentHashCode() }?.toSet().orEmpty()
+                // some Android versions don't fill signingInfo for archives; then the installer's own check decides
+                theirs.isEmpty() || mine.isEmpty() || mine == theirs
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageArchiveInfo(apk.absolutePath, 0)?.packageName == context.packageName
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

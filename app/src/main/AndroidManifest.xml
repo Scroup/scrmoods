@@ -47,6 +47,8 @@
                 android:resource="@xml/quick_note_widget" />
         </receiver>
 
+        <!-- Taps on the widget's buttons; not exported, so other apps can't change the data -->
+        <receiver android:name=".WidgetActionReceiver" android:exported="false" />
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <!-- The morning sleep question (notification reply and Poor / OK / Good) -->
         <receiver android:name=".SleepReceiver" android:exported="false" />

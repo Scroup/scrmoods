@@ -250,6 +250,16 @@ fun App() {
             confirmButton = { TextButton(onClick = { Repo.loadError = null }) { Text(tr("OK")) } },
         )
     }
+    // writing to disk failed: say so (the next successful save clears it)
+    Repo.saveError?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { Repo.saveError = null },
+            containerColor = Page,
+            title = { Text(tr("Problem saving data")) },
+            text = { Text(msg) },
+            confirmButton = { TextButton(onClick = { Repo.saveError = null }) { Text(tr("OK")) } },
+        )
+    }
 }
 
 @Composable

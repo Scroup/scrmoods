@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.util.Log
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.Executors
@@ -19,6 +21,16 @@ object Repo {
         private set
 
     var loadError by mutableStateOf<String?>(null)
+
+    /** Set when writing to disk failed (disk full…), so the person is told instead of losing data silently. */
+    var saveError by mutableStateOf<String?>(null)
+
+    /**
+     * Every change is a read-modify-write of [data]. The UI thread, the widget, notification buttons and alarms all
+     * change data (the receivers on their own threads), so changes go one at a time under this lock; otherwise two
+     * quick "+1 cup" taps could both read 3 and both write 4.
+     */
+    private val lock = Any()
 
     val filePath: String get() = file.absolutePath
 
@@ -43,9 +55,9 @@ object Repo {
         }
     }
 
-    private fun update(change: (AppData) -> AppData) {
+    private fun update(change: (AppData) -> AppData) = synchronized(lock) {
         data = change(data)
-        save()
+        save() // queued inside the lock, so the writer saves snapshots in the same order the changes happened
     }
 
     private fun save() {
@@ -54,15 +66,24 @@ object Repo {
         writer.execute {
             try {
                 val tmp = File(target.parentFile, target.name + ".tmp")
-                tmp.outputStream().use { XmlStore.write(snapshot, it) }
+                FileOutputStream(tmp).use { out ->
+                    XmlStore.write(snapshot, out)
+                    out.fd.sync() // on disk before the rename, so a power cut can't leave an empty file behind
+                }
                 if (!tmp.renameTo(target)) {
                     tmp.copyTo(target, overwrite = true)
                     tmp.delete()
                 }
-            } catch (_: Exception) {
+                if (saveError != null) postMain { saveError = null }
+            } catch (e: Exception) {
+                Log.e("scrmoods", "Saving failed", e)
+                postMain { saveError = tr("Could not save your data ({0}). Free up some space and export a copy.", e.message ?: e.javaClass.simpleName) }
             }
         }
     }
+
+    private val mainHandler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+    private fun postMain(block: () -> Unit) { mainHandler.post(block) }
 
     /** Waits until everything is written to disk (used by the notification "Taken" button). */
     /** Answers the home-screen widget shows (today's cups and meals, last night's sleep). */
@@ -87,6 +108,19 @@ object Repo {
         val map = d.entries.toMutableMap()
         if (e.isEmpty) map.remove(date) else map[date] = e
         d.copy(entries = map)
+    }
+
+    /**
+     * Adds [delta] to a counted answer (cups, meals) and returns the new count. Read and write happen under one lock,
+     * so taps on the widget that arrive at the same time are all counted.
+     */
+    fun increment(date: String, pointId: String, delta: Int = 1): Int {
+        var n = 0
+        synchronized(lock) {
+            n = ((entry(date).values[pointId]?.toFloatOrNull()?.toInt() ?: 0) + delta).coerceAtLeast(0)
+            setValue(date, pointId, if (n == 0) null else n.toString())
+        }
+        return n
     }
 
     /** value = null clears the answer. */
@@ -235,11 +269,16 @@ object Repo {
     fun export(out: OutputStream) = XmlStore.write(data, out)
 
     /** Replaces all data with the contents of an exported file. Throws if the file can't be read. */
-    fun import(input: InputStream) {
-        val d = XmlStore.read(input)
-        data = d
-        save()
+    fun import(input: InputStream) = replaceAll(XmlStore.read(input))
+
+    /** Replaces all data with already-read data (the file is read on a background thread first). */
+    fun replaceAll(d: AppData) {
+        synchronized(lock) {
+            data = d
+            save()
+        }
         pointsChanged()
+        appContext?.let { QuickNoteWidget.refresh(it) }
     }
 
     fun resetSetupToDefaults() {

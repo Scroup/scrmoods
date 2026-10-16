@@ -113,7 +113,7 @@ fun Cookie(full: Boolean, modifier: Modifier = Modifier.fillMaxSize()) {
 @Composable
 fun MealsTracker(meals: TrackingPoint, snacks: TrackingPoint?, values: Map<String, String>, dateKey: String, gutter: Dp) {
     val goal = meals.goalMeals
-    val eaten = values[meals.id]?.toFloatOrNull()?.toInt() ?: 0
+    val eaten = (values[meals.id]?.toFloatOrNull()?.toInt() ?: 0).coerceIn(0, 20) // drawn one bowl each
     Column(Modifier.fillMaxWidth().padding(horizontal = gutter).padding(top = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

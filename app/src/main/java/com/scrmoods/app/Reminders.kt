@@ -212,6 +212,9 @@ class ReminderReceiver : BroadcastReceiver() {
                         Reminders.dismiss(context, pointId, time)
                     }
                 }
+            } catch (e: Exception) {
+                // never let one bad value crash the app from a notification or alarm
+                android.util.Log.e("scrmoods", "Receiver failed: ${intent.action}", e)
             } finally {
                 pending.finish()
             }
@@ -228,6 +231,10 @@ class BootReceiver : BroadcastReceiver() {
                 Repo.init(context.applicationContext)
                 Lang.init(context.applicationContext)
                 Reminders.scheduleAll(context)
+                QuickNoteWidget.refresh(context) // after an update the widget's buttons point at the new receiver
+            } catch (e: Exception) {
+                // never let one bad value crash the app from a notification or alarm
+                android.util.Log.e("scrmoods", "Receiver failed: ${intent.action}", e)
             } finally {
                 pending.finish()
             }

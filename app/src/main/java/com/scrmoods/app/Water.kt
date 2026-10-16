@@ -43,7 +43,8 @@ import androidx.compose.ui.unit.sp
 fun waterPoint(d: AppData = Repo.data): TrackingPoint? = d.points.firstOrNull { it.id == Water.POINT && !it.archived }
 
 /** The daily goal in cups (kept as the water point's maximum). */
-val TrackingPoint.goalCups: Int get() = max.toInt().coerceAtLeast(1)
+/** Same range as the goal setting (1–30), so a damaged file can't ask for a million drops. */
+val TrackingPoint.goalCups: Int get() = max.toInt().coerceIn(1, 30)
 
 /**
  * A row of cups to tap through the day: tap an empty cup to fill up to it, tap the last full cup to take it back.
@@ -51,7 +52,7 @@ val TrackingPoint.goalCups: Int get() = max.toInt().coerceAtLeast(1)
  */
 @Composable
 fun WaterTracker(p: TrackingPoint, value: String?, dateKey: String, gutter: androidx.compose.ui.unit.Dp) {
-    val drunk = value?.toFloatOrNull()?.toInt() ?: 0
+    val drunk = (value?.toFloatOrNull()?.toInt() ?: 0).coerceIn(0, 60) // drawn one drop each
     val goal = p.goalCups
     fun set(n: Int) = Repo.setValue(dateKey, p.id, if (n <= 0) null else n.toString())
 
